@@ -31,6 +31,20 @@
 
 #define CUSTOM_LAYER_READ //if you remove this it causes issues - needs better guarding
 
+// Reduce firmware size. Comment out these lines if u need to use these features.
+#define LAYER_STATE_8BIT // comment this out if you need to use more than 8 layers.
+#define NO_ACTION_TAPPING // For layer-tap/mod-tap.
+#define NO_ACTION_ONESHOT // For one-shot keys & one-shot mods
+
+// For syncing data across two halves of keyboard.
+#define SPLIT_TRANSPORT_MIRROR
+#define SPLIT_LAYER_STATE_ENABLE
+#define SPLIT_MODS_ENABLE
+#define SPLIT_WPM_ENABLE
+#define SPLIT_LED_STATE_ENABLE
+
+#define WPM_SAMPLE_SECONDS 2
+#define WPM_SAMPLE_PERIODS 18
 
 #define QUICK_TAP_TERM 0
 #ifdef TAPPING_TERM
@@ -39,6 +53,10 @@
 #endif
 #define ENCODER_DIRECTION_FLIP
 
+#define OLED_BRIGHTNESS 255
+#define OLED_FADE_OUT
+#define OLED_TIMEOUT 10000
+#define OLED_FADE_OUT_INTERVAL 10
 
 #define RGBLIGHT_SLEEP
 //
@@ -69,9 +87,6 @@
 //#define RGBLED_SPLIT
 #define RGB_MATRIX_SPLIT { 36, 36 }
 #define RGBLED_SPLIT { 36, 36 } // haven't figured out how to use this yet
-#define SPLIT_TRANSPORT_MIRROR
-#define SPLIT_LAYER_STATE_ENABLE
-#define SPLIT_MODS_ENABLE
 
 //#define RGBLED_NUM 30
 #define RGBLIGHT_LIMIT_VAL 120
@@ -124,3 +139,4 @@
  #   define ENABLE_RGB_MATRIX_MULTISPLASH
 //  #   define ENABLE_RGB_MATRIX_SOLID_SPLASH
  #   define ENABLE_RGB_MATRIX_SOLID_MULTISPLASH
+#define RGB_MATRIX_SOLID_REACTIVE_GRADIENT_MODE
