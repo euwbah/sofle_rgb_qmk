@@ -17,52 +17,13 @@
   // SOFLE RGB
 #include <stdio.h>
 
+// This include is required for using rpc transactions between master and slave
+#include "transactions.h"
+
 #include QMK_KEYBOARD_H
 
 // in led update frames
 #define OLED_INFO_DISPLAY_DURATION 50
-
-#define HSV_OVERRIDE_HELP(h, s, v, Override) h, s , Override
-#define HSV_OVERRIDE(hsv, Override) HSV_OVERRIDE_HELP(hsv,Override)
-
-// Light combinations
-#define SET_INDICATORS(hsv) \
-	{0, 1, HSV_OVERRIDE_HELP(hsv, INDICATOR_BRIGHTNESS)}, \
-    {35+0, 1, hsv}
-#define SET_UNDERGLOW(hsv) \
-	{1, 6, hsv}, \
-    {35+1, 6,hsv}
-#define SET_NUMPAD(hsv)     \
-	{35+15, 5, hsv},\
-	  {35+22, 3, hsv},\
-	  {35+27, 3, hsv}
-#define SET_NUMROW(hsv) \
-	{10, 2, hsv}, \
-		{20, 2, hsv}, \
-		{30, 2, hsv}, \
-	  {35+ 10, 2, hsv}, \
-	  {35+ 20, 2, hsv}, \
-	  {35+ 30, 2, hsv}
-#define SET_INNER_COL(hsv)	\
-	{33, 4, hsv}, \
-	  {35+ 33, 4, hsv}
-
-#define SET_OUTER_COL(hsv) \
-	{7, 4, hsv}, \
-	  {35+ 7, 4, hsv}
-#define SET_THUMB_CLUSTER(hsv) 	\
-	{25, 2, hsv}, \
-	  {35+ 25, 2, hsv}
-#define SET_LAYER_ID(hsv) 	\
-	{0, 1, HSV_OVERRIDE_HELP(hsv, INDICATOR_BRIGHTNESS)}, \
-    {35+0, 1, HSV_OVERRIDE_HELP(hsv, INDICATOR_BRIGHTNESS)}, \
-		{1, 6, hsv}, \
-    {35+1, 6, hsv}, \
-		{7, 4, hsv}, \
-	  {35+ 7, 4, hsv}, \
-		{25, 2, hsv}, \
-	  {35+ 25, 2, hsv}
-
 
 enum sofle_layers {
     _DEFAULTS = 0,
@@ -92,6 +53,16 @@ enum oled_display_mode_enum {
     OLED_DISPLAY_VAL,
     OLED_DISPLAY_SPD
 };
+
+// sent using the USER_SYNC_HOST_UTIL transaction ID.
+// the RPC_M2S_BUFFER_SIZE is increased to 48 in config.h, so we can send up to 6 uint8_t values.
+typedef struct _m_to_s_host_util_t {
+    uint8_t cpu_usage;
+    uint8_t ram_usage;
+    uint8_t gpu_usage;
+    uint8_t gpu_mem_usage;
+    uint8_t gpu_temp;
+} m_to_s_host_util_t;
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   [_QWERTY] = LAYOUT(
@@ -195,6 +166,12 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 ),
 };
 
+static uint8_t cpu_usage = 0;
+static uint8_t ram_usage = 0;
+static uint8_t gpu_usage = 0;
+static uint8_t gpu_mem_usage = 0;
+static uint8_t gpu_temp = 0;
+
 static uint8_t mod_state;
 static bool is_backspace_down = false;
 
@@ -204,94 +181,26 @@ static uint8_t oled_display_mode = OLED_DISPLAY_HUE;
 
 static uint8_t info_display_timeout = 0; // in led update frames
 
-// Now define the array of layers. Later layers take precedence
+void user_sync_host_util_slave_handler(uint8_t in_buflen, const void* in_data, uint8_t out_buflen, void* out_data) {
+    const m_to_s_host_util_t* host_util = (const m_to_s_host_util_t*)in_data;
+    cpu_usage = host_util->cpu_usage;
+    ram_usage = host_util->ram_usage;
+    gpu_usage = host_util->gpu_usage;
+    gpu_mem_usage = host_util->gpu_mem_usage;
+    gpu_temp = host_util->gpu_temp;
+}
 
-// // QWERTY,
-// // Light on inner column and underglow
-// const rgblight_segment_t PROGMEM layer_qwerty_lights[] = RGBLIGHT_LAYER_SEGMENTS(
-//   SET_LAYER_ID(HSV_RED)
+void keyboard_post_init_user() {
+    transaction_register_rpc(USER_SYNC_HOST_UTIL, user_sync_host_util_slave_handler);
+}
 
-// );
-// const rgblight_segment_t PROGMEM layer_colemakdh_lights[] = RGBLIGHT_LAYER_SEGMENTS(
-//   SET_LAYER_ID(HSV_PINK)
-// );
-
-// // _NUM,
-// // Light on outer column and underglow
-// const rgblight_segment_t PROGMEM layer_num_lights[] = RGBLIGHT_LAYER_SEGMENTS(
-// 	SET_LAYER_ID(HSV_TEAL)
-
-// );
-// // _SYMBOL,
-// // Light on inner column and underglow
-// const rgblight_segment_t PROGMEM layer_symbol_lights[] = RGBLIGHT_LAYER_SEGMENTS(
-// 	SET_LAYER_ID(HSV_BLUE)
-
-//     );
-// // _COMMAND,
-// // Light on inner column and underglow
-// const rgblight_segment_t PROGMEM layer_command_lights[] = RGBLIGHT_LAYER_SEGMENTS(
-//   SET_LAYER_ID(HSV_PURPLE)
-// );
-
-// //_NUMPAD
-// const rgblight_segment_t PROGMEM layer_numpad_lights[] = RGBLIGHT_LAYER_SEGMENTS(
-// 	SET_INDICATORS(HSV_ORANGE),
-//     SET_UNDERGLOW(HSV_ORANGE),
-// 	SET_NUMPAD(HSV_BLUE),
-//     {7, 4, HSV_ORANGE},
-//     {25, 2, HSV_ORANGE},
-//     {35+6, 4, HSV_ORANGE},
-//     {35+25, 2, HSV_ORANGE}
-//     );
-// // _SWITCHER   // light up top row
-// const rgblight_segment_t PROGMEM layer_switcher_lights[] = RGBLIGHT_LAYER_SEGMENTS(
-// 	SET_LAYER_ID(HSV_GREEN),
-// 	SET_NUMROW(HSV_GREEN)
-// );
-
-// const rgblight_segment_t* const PROGMEM my_rgb_layers[] = RGBLIGHT_LAYERS_LIST(
-//     layer_qwerty_lights,
-// 	layer_num_lights,// overrides layer 1
-// 	layer_symbol_lights,
-//     layer_command_lights,
-// 	layer_numpad_lights,
-// 	layer_switcher_lights,  // Overrides other layers
-// 	layer_colemakdh_lights
-// );
-
-// layer_state_t layer_state_set_user(layer_state_t state) {
-// 	rgblight_set_layer_state(0, layer_state_cmp(state, _DEFAULTS) && layer_state_cmp(default_layer_state,_QWERTY));
-// 	rgblight_set_layer_state(7, layer_state_cmp(state, _DEFAULTS) && layer_state_cmp(default_layer_state,_COLEMAKDH));
-
-
-// 	rgblight_set_layer_state(1, layer_state_cmp(state, _LOWER));
-// 	rgblight_set_layer_state(2, layer_state_cmp(state, _RAISE));
-// 	rgblight_set_layer_state(3, layer_state_cmp(state, _ADJUST));
-// 	rgblight_set_layer_state(4, layer_state_cmp(state, _NAV));
-// 	rgblight_set_layer_state(5, layer_state_cmp(state, _SWITCH));
-//     return state;
-// }
-
-
-
-// This runs right atfer initializing the individual components of the keyboard
-// void keyboard_post_init_user(void) {
-//     Enable the LED layers
-//     rgblight_layers = my_rgb_layers;
-// 	rgblight_mode(10);// haven't found a way to set this in a more useful way
-// }
-
-// Instead of bongo cat, which uses a lot of memory, uncomment & use this function to display a static logo instead.
-// static void render_logo(void) {
-//     static const char PROGMEM qmk_logo[] = {
-//         0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89, 0x8A, 0x8B, 0x8C, 0x8D, 0x8E, 0x8F, 0x90, 0x91, 0x92, 0x93, 0x94,
-//         0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xA7, 0xA8, 0xA9, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xAF, 0xB0, 0xB1, 0xB2, 0xB3, 0xB4,
-//         0xC0, 0xC1, 0xC2, 0xC3, 0xC4, 0xC5, 0xC6, 0xC7, 0xC8, 0xC9, 0xCA, 0xCB, 0xCC, 0xCD, 0xCE, 0xCF, 0xD0, 0xD1, 0xD2, 0xD3, 0xD4, 0x00
-//     };
-
-//     oled_write_P(qmk_logo, false);
-// }
+oled_rotation_t oled_init_user(oled_rotation_t rotation) {
+    if (is_keyboard_master()) {
+        return OLED_ROTATION_270;
+    }
+    return OLED_ROTATION_270;
+    // return rotation;
+}
 
 static void print_status_narrow(void) {
     // Print current mode
@@ -366,13 +275,6 @@ static void print_status_narrow(void) {
     }
 }
 
-oled_rotation_t oled_init_user(oled_rotation_t rotation) {
-    if (is_keyboard_master()) {
-        return OLED_ROTATION_270;
-    }
-    return rotation;
-}
-
 // lines is the length of the bar in pixels
 // bar_byte is 8 bits, each bit represents a pixel in the bar.
 // e.g. 0xFF will be a full bar of 8 pixels.
@@ -400,13 +302,21 @@ static void clear_bar(uint8_t length) {
     oled_advance_char();
 }
 
-#define ANIM_FRAME 300
+static void draw_utilization_bar(uint8_t utilization) {
+    uint8_t bar_length = utilization / 3;
+    if (bar_length > 32) {
+        bar_length = 32;
+    }
+    draw_bar(bar_length, 0x7E);
+    clear_bar(32-bar_length);
+}
+
+#define ANIM_FRAME 250
 
 static uint32_t anim_timer = 0;
 static uint32_t anim_sleep_timer = 0;
 
 static void oled_render_anim(void) {
-
     const uint8_t speed = get_current_wpm();
 
     void oled_render_speed(void) {
@@ -428,10 +338,32 @@ static void oled_render_anim(void) {
 
     if (timer_elapsed32(anim_timer) > ANIM_FRAME) {
         anim_timer = timer_read32();
-        oled_set_cursor(4, 2);
-        uint8_t bar_length = speed / 5;
-        draw_bar(bar_length, 0xFC);
-        clear_bar(40-bar_length);
+
+        oled_set_cursor(0, 2);
+        oled_write_P(PSTR("CPU"), false);
+        oled_set_cursor(0, 3);
+        draw_utilization_bar(cpu_usage);
+
+        oled_set_cursor(0, 4);
+        oled_write_P(PSTR("RAM"), false);
+        oled_set_cursor(0, 5);
+        draw_utilization_bar(ram_usage);
+
+        oled_set_cursor(0, 6);
+        oled_write_P(PSTR("GPU"), false);
+        oled_set_cursor(0, 7);
+        draw_utilization_bar(gpu_usage);
+
+        oled_set_cursor(0, 8);
+        oled_write_P(PSTR("VRAM"), false);
+        oled_set_cursor(0, 9);
+        draw_utilization_bar(gpu_mem_usage);
+
+        oled_set_cursor(0, 10);
+        oled_write_P(PSTR("GTEMP"), false);
+        oled_set_cursor(0, 11);
+        draw_utilization_bar(gpu_temp);
+
         oled_render_speed();
     }
 }
@@ -634,4 +566,20 @@ bool rgb_matrix_indicators_user(void) {
         rgb_matrix_set_color(0, 0, 0, 0);
     }
     return true;
+}
+
+void raw_hid_receive(uint8_t *data, uint8_t length) {
+    if(data[0] == 1) {
+        // First data byte 1 means we are receiving host utilization data.
+        cpu_usage = data[1];
+        ram_usage = data[2];
+        gpu_usage = data[3];
+        gpu_mem_usage = data[4];
+        gpu_temp = data[5];
+
+        m_to_s_host_util_t host_util_data = {cpu_usage, ram_usage, gpu_usage, gpu_mem_usage, gpu_temp};
+        // no need for bidirectional communication, so use transaction_rpc_send instead of
+        // transaction_rpc_exec
+        transaction_rpc_send(USER_SYNC_HOST_UTIL, sizeof(host_util_data), &host_util_data);
+    }
 }
