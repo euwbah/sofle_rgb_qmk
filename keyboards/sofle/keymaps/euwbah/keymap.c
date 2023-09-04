@@ -55,13 +55,15 @@ enum oled_display_mode_enum {
 };
 
 // sent using the USER_SYNC_HOST_UTIL transaction ID.
-// the RPC_M2S_BUFFER_SIZE is increased to 48 in config.h, so we can send up to 6 uint8_t values.
+// the RPC_M2S_BUFFER_SIZE defaults to 32 (can increase in config.h), so we can send up to 32 uint8_t values.
 typedef struct _m_to_s_host_util_t {
     uint8_t cpu_usage;
+    uint8_t cpu_temp;
     uint8_t ram_usage;
     uint8_t gpu_usage;
     uint8_t gpu_mem_usage;
     uint8_t gpu_temp;
+    uint8_t gpu1_usage;
 } m_to_s_host_util_t;
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -167,10 +169,12 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 };
 
 static uint8_t cpu_usage = 0;
+static uint8_t cpu_temp = 0;
 static uint8_t ram_usage = 0;
 static uint8_t gpu_usage = 0;
 static uint8_t gpu_mem_usage = 0;
 static uint8_t gpu_temp = 0;
+static uint8_t gpu1_usage = 0;
 
 static uint8_t mod_state;
 static bool is_backspace_down = false;
@@ -184,10 +188,12 @@ static uint8_t info_display_timeout = 0; // in led update frames
 void user_sync_host_util_slave_handler(uint8_t in_buflen, const void* in_data, uint8_t out_buflen, void* out_data) {
     const m_to_s_host_util_t* host_util = (const m_to_s_host_util_t*)in_data;
     cpu_usage = host_util->cpu_usage;
+    cpu_temp = host_util->cpu_temp;
     ram_usage = host_util->ram_usage;
     gpu_usage = host_util->gpu_usage;
     gpu_mem_usage = host_util->gpu_mem_usage;
     gpu_temp = host_util->gpu_temp;
+    gpu1_usage = host_util->gpu1_usage;
 }
 
 void keyboard_post_init_user() {
@@ -204,7 +210,6 @@ oled_rotation_t oled_init_user(oled_rotation_t rotation) {
 
 static void print_status_narrow(void) {
     // Print current mode
-    oled_write_P(PSTR("\n"), false);
     oled_write_ln_P(PSTR("euw\nbah\n"), false);
 
     switch (get_highest_layer(default_layer_state)) {
@@ -273,6 +278,11 @@ static void print_status_narrow(void) {
         // The text is persistent per line, so we need to clear it with this.
         oled_write_ln_P(PSTR("\n\n"), false);
     }
+
+    oled_set_cursor(0, 11);
+    oled_write_P(PSTR("WPM"), false);
+    oled_set_cursor(0, 12);
+    oled_write(get_u8_str(get_current_wpm(), ' '), false);
 }
 
 // lines is the length of the bar in pixels
@@ -282,7 +292,7 @@ static void draw_bar(uint8_t length, uint8_t bar_byte) {
     char full_width_bar[6] = {bar_byte, bar_byte, bar_byte, bar_byte, bar_byte, bar_byte};
     for (uint8_t i = 0; i < length / 6; i++) {
         oled_write_raw(full_width_bar, 6);
-        oled_advance_char();
+        oled_advance_char()
     }
     char partial_bar[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     for (uint8_t i = 0; i < length % 6; i++) {
@@ -319,13 +329,6 @@ static uint32_t anim_sleep_timer = 0;
 static void oled_render_anim(void) {
     const uint8_t speed = get_current_wpm();
 
-    void oled_render_speed(void) {
-        oled_set_cursor(0, 0);
-        oled_write_P(PSTR("WPM"), false);
-        oled_set_cursor(0, 1);
-        oled_write(get_u8_str(speed, ' '), false);
-    }
-
     if (speed != 0) {
         oled_on();
         anim_sleep_timer = timer_read32();
@@ -338,33 +341,42 @@ static void oled_render_anim(void) {
 
     if (timer_elapsed32(anim_timer) > ANIM_FRAME) {
         anim_timer = timer_read32();
+        uint8_t cursor_y = 0;
 
-        oled_set_cursor(0, 2);
+        oled_set_cursor(0, cursor_y++);
         oled_write_P(PSTR("CPU"), false);
-        oled_set_cursor(0, 3);
+        oled_set_cursor(0, cursor_y++);
         draw_utilization_bar(cpu_usage);
 
-        oled_set_cursor(0, 4);
+        oled_set_cursor(0, cursor_y++);
+        oled_write_P(PSTR("CTEMP"), false);
+        oled_set_cursor(0, cursor_y++);
+        draw_utilization_bar(cpu_temp);
+
+        oled_set_cursor(0, cursor_y++);
         oled_write_P(PSTR("RAM"), false);
-        oled_set_cursor(0, 5);
+        oled_set_cursor(0, cursor_y++);
         draw_utilization_bar(ram_usage);
 
-        oled_set_cursor(0, 6);
+        oled_set_cursor(0, cursor_y++);
         oled_write_P(PSTR("GPU"), false);
-        oled_set_cursor(0, 7);
+        oled_set_cursor(0, cursor_y++);
         draw_utilization_bar(gpu_usage);
 
-        oled_set_cursor(0, 8);
+        oled_set_cursor(0, cursor_y++);
         oled_write_P(PSTR("VRAM"), false);
-        oled_set_cursor(0, 9);
+        oled_set_cursor(0, cursor_y++);
         draw_utilization_bar(gpu_mem_usage);
 
-        oled_set_cursor(0, 10);
+        oled_set_cursor(0, cursor_y++);
         oled_write_P(PSTR("GTEMP"), false);
-        oled_set_cursor(0, 11);
+        oled_set_cursor(0, cursor_y++);
         draw_utilization_bar(gpu_temp);
 
-        oled_render_speed();
+        oled_set_cursor(0, cursor_y++);
+        oled_write_P(PSTR("GPU1"), false);
+        oled_set_cursor(0, cursor_y++);
+        draw_utilization_bar(gpu1_usage);
     }
 }
 
@@ -572,12 +584,14 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
     if(data[0] == 1) {
         // First data byte 1 means we are receiving host utilization data.
         cpu_usage = data[1];
-        ram_usage = data[2];
-        gpu_usage = data[3];
-        gpu_mem_usage = data[4];
-        gpu_temp = data[5];
+        cpu_temp = data[2];
+        ram_usage = data[3];
+        gpu_usage = data[4];
+        gpu_mem_usage = data[5];
+        gpu_temp = data[6];
+        gpu1_usage = data[7];
 
-        m_to_s_host_util_t host_util_data = {cpu_usage, ram_usage, gpu_usage, gpu_mem_usage, gpu_temp};
+        m_to_s_host_util_t host_util_data = {cpu_usage, cpu_temp, ram_usage, gpu_usage, gpu_mem_usage, gpu_temp, gpu1_usage};
         // no need for bidirectional communication, so use transaction_rpc_send instead of
         // transaction_rpc_exec
         transaction_rpc_send(USER_SYNC_HOST_UTIL, sizeof(host_util_data), &host_util_data);

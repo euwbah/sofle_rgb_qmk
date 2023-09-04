@@ -52,7 +52,7 @@
 
 // transaction ID for custom RPC communication of host utilization stats from master to slave
 #define SPLIT_TRANSACTION_IDS_USER USER_SYNC_HOST_UTIL
-#define RPC_M2S_BUFFER_SIZE 48
+#define RPC_M2S_BUFFER_SIZE 32
 
 #define QUICK_TAP_TERM 0
 #ifdef TAPPING_TERM
