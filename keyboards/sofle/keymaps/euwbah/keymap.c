@@ -48,10 +48,16 @@ enum custom_keycodes {
 };
 
 enum oled_display_mode_enum {
+    // Display RGB settings when modified
     OLED_DISPLAY_HUE = 0,
     OLED_DISPLAY_SAT,
     OLED_DISPLAY_VAL,
-    OLED_DISPLAY_SPD
+    OLED_DISPLAY_SPD,
+    // Display lock key status when modified
+    OLED_DISPLAY_CAPS_LOCK,
+    OLED_DISPLAY_SCROLL_LOCK,
+    OLED_DISPLAY_NUM_LOCK,
+    OLED_DISPLAY_KANA,
 };
 
 // sent using the USER_SYNC_HOST_UTIL transaction ID.
@@ -77,7 +83,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
   KC_LCTL,  KC_Z,   KC_X,    KC_C,    KC_V,    KC_B,  KC_MUTE,  KC_D_MUTE,KC_N,    KC_M,   KC_COMM, KC_DOT,  KC_SLSH, KC_ENT,
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
-                 KC_LALT, KC_LGUI, KC_LOWER, KC_LSFT,  KC_SPC   ,  KC_NAV, KC_SPC ,  KC_RAISE, KC_LPRN, KC_RPRN
+                 KC_LALT, KC_LGUI, KC_LOWER, KC_LSFT,  KC_SPC,    KC_NAV,  KC_SPC,  KC_RAISE, KC_LPRN,  KC_RPRN
   //            \--------+--------+--------+---------+-------|   |--------+---------+--------+---------+-------/
 ),
 
@@ -111,29 +117,29 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
 [_LOWER] = LAYOUT(
   //,------------------------------------------------.                    ,---------------------------------------------------.
-  KC_F1,  KC_F2,  KC_F3,   A(KC_F4),   KC_F5,   S(KC_F6),                  KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,  KC_F12,
+  KC_F1,    KC_F2,  KC_F3,   A(KC_F4), KC_F5,   S(KC_F6),                 KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,  A(KC_F12),
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
-  KC_F13,   KC_F14,  KC_F15,  KC_F16,  KC_F17,  KC_F18,                   KC_F19,  KC_F20, KC_F21,   KC_F22,    KC_F23, KC_F24,
+  KC_F13,   KC_F14, KC_F15,  KC_F16,   KC_F17,  KC_F18,                   KC_F19,  KC_F20,  KC_F21,  KC_F22,  KC_F23,  KC_F24,
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
-  _______, C(S(KC_ESC)),C(A(KC_DEL)), KC_NO,KC_WH_U,KC_PGUP,              KC_BRIU, KC_VOLU, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+  _______,C(S(KC_ESC)),C(A(KC_DEL)),KC_PSCR,KC_WH_U,KC_WH_L,                KC_BRIU, KC_VOLU, KC_BTN1, KC_MS_U, KC_BTN2, KC_BTN4,
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
-  _______,  KC_NO,  KC_NO,   KC_NO,   KC_WH_D, KC_PGDN,_______,    _______,KC_BRID,  KC_VOLD,  KC_NO,   KC_NO,   KC_NO,    _______,
+  _______,  KC_NO,  KC_NO,   KC_NO,    KC_WH_D, KC_WH_R,_______, _______, KC_BRID, KC_VOLD, KC_MS_L, KC_MS_D, KC_MS_R, KC_BTN5,
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
-                 _______, _______, _______, _______, QK_BOOT,     _______, _______, _______, _______, _______
+            C(G(KC_LEFT)),C(G(KC_RGHT)),_______,_______,QK_BOOT, _______, KC_BTN8, _______, KC_BTN7, KC_BTN3
   //            \--------+--------+--------+---------+-------|   |--------+---------+--------+---------+-------/
 ),
 
-// KC_LANG1 switches to hiragana when in Japanese IME mode,
-// KC_LANG2 switches to half-width alphanumeric.
+// KC_LANG1 switches to hiragana when in Japanese IME mode. Also hangul/english toggle key.
+// KC_LANG2 switches to half-width alphanumeric. Also hanja conversion key.
 [_RAISE] = LAYOUT(
   //,------------------------------------------------.                    ,---------------------------------------------------.
   KC_GRV,    KC_F2,  KC_F3,   KC_F4,   KC_F5,   KC_F6,                      KC_F7,  KC_F8  , KC_F9,  KC_F10 , KC_F11 , KC_F12,
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
-  KC_TILD,  KC_1,   KC_2,    KC_3,    KC_4,     KC_5,                      KC_6,   KC_7,    KC_8,    KC_9,     KC_0,    KC_BSLS,
+  KC_TILD,  KC_1,   KC_2,    KC_3,    KC_4,     KC_5,                      KC_6,   KC_7,    KC_8,    KC_9,     KC_0,    KC_QUES,
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
-  _______, KC_EXLM,  KC_AT,  KC_HASH,  KC_DLR,  KC_PERC,                 KC_CIRC,   KC_LCBR, KC_RCBR, KC_LBRC, KC_RBRC, KC_PIPE,
+  _______, KC_EXLM,  KC_AT,  KC_HASH,  KC_DLR,  KC_PERC,                 KC_CIRC,   KC_LCBR, KC_RCBR, KC_LBRC, KC_RBRC, KC_BSLS,
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
-  _______, KC_QUES, _______, KC_LPRN, KC_RPRN,  KC_LT,_______,    _______,KC_GT,   KC_PLUS, KC_MINS, KC_ASTR, KC_SLSH, KC_QUES,
+  _______, KC_QUES, _______, KC_LPRN, KC_RPRN,  KC_LT,_______,    _______,KC_GT,   KC_PLUS, KC_MINS, KC_ASTR, KC_SLSH, KC_PIPE,
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
                  _______, _______, _______, _______, _______,     KC_LNG1, KC_LNG2, _______, KC_EQL,  KC_AMPR
   //            \--------+--------+--------+---------+-------|   |--------+---------+--------+---------+-------/
@@ -143,16 +149,22 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //,------------------------------------------------.                    ,---------------------------------------------------.
   EE_CLR,  XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,                   XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
-  QK_BOOT, XXXXXXX,XXXXXXX, XXXXXXX, XXXXXXX, KC_COLEMAKDH,                    XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+  QK_BOOT, XXXXXXX,XXXXXXX, XXXXXXX, XXXXXXX, KC_COLEMAKDH,               XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
-  RGB_TOG, RGB_HUI,RGB_SAI, RGB_VAI, RGB_SPI, KC_COLEMAK,             C(G(KC_LEFT)),KC_NO,KC_NO,C(G(KC_RGHT)),XXXXXXX, XXXXXXX,
+  RGB_TOG, RGB_HUI,RGB_SAI, RGB_VAI, RGB_SPI, KC_COLEMAK,                 XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
   RGB_MOD, RGB_HUD,RGB_SAD, RGB_VAD, RGB_SPD, KC_QWERTY,XXXXXXX,   XXXXXXX, XXXXXXX, KC_MPRV, KC_MPLY, KC_MNXT, XXXXXXX, XXXXXXX,
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
                    _______, _______, _______, _______, _______,     _______, _______, _______, _______, _______
     //            \--------+--------+--------+---------+-------|   |--------+---------+--------+---------+-------/
 ),
-
+/*
+KC_INT1: japanese keyboard input 'ro'
+KC_INT2: katakana/hiragana key
+KC_INT3: Yen, full width hyphen
+KC_INT4: Henkan
+KC_INT5: Muhenkan
+*/
 [_NAV] = LAYOUT(
   //,------------------------------------------------.                    ,---------------------------------------------------.
   _______, KC_PIPE, KC_LPRN, KC_RPRN, KC_AMPR, KC_NUM,                   KC_BRK, KC_PSCR,  _______, _______, XXXXXXX, XXXXXXX,
@@ -163,7 +175,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
   _______,  KC_PLUS, KC_P1, KC_P2,    KC_P3,  KC_ASTR,_______,    _______,KC_DEL, KC_INS,  KC_PSCR,  KC_SCRL, _______, _______,
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
-              KC_P0, KC_PDOT, KC_EQL, _______, _______,          _______, _______, _______ , _______, _______
+              KC_P0, KC_PDOT, KC_EQL, _______, KC_INT5,          _______, KC_INT1, KC_INT2, KC_INT3, KC_INT4
   //            \--------+--------+--------+---------+-------|   |--------+---------+--------+---------+-------/
 ),
 };
@@ -272,6 +284,38 @@ static void print_status_narrow(void) {
                 oled_write_ln_P(PSTR("SPD"), false);
                 oled_write_ln(get_u8_str(rgb_matrix_get_speed(), ' '), false);
                 break;
+            case OLED_DISPLAY_CAPS_LOCK:
+                oled_write_ln_P(PSTR("CAPS"), false);
+                if (host_keyboard_led_state().caps_lock) {
+                    oled_write_ln_P(PSTR("ON"), true);
+                } else {
+                    oled_write_ln_P(PSTR("OFF"), false);
+                }
+                break;
+            case OLED_DISPLAY_SCROLL_LOCK:
+                oled_write_P(PSTR("SCRLK"), false);
+                if (host_keyboard_led_state().scroll_lock) {
+                    oled_write_ln_P(PSTR("ON"), true);
+                } else {
+                    oled_write_ln_P(PSTR("OFF"), false);
+                }
+                break;
+            case OLED_DISPLAY_NUM_LOCK:
+                oled_write_P(PSTR("NUMLK"), false);
+                if (host_keyboard_led_state().num_lock) {
+                    oled_write_ln_P(PSTR("ON"), true);
+                } else {
+                    oled_write_ln_P(PSTR("OFF"), false);
+                }
+                break;
+            case OLED_DISPLAY_KANA:
+                oled_write_ln_P(PSTR("KANA"), false);
+                if (host_keyboard_led_state().kana) {
+                    oled_write_ln_P(PSTR("ON"), true);
+                } else {
+                    oled_write_ln_P(PSTR("OFF"), false);
+                }
+                break;
         }
         info_display_timeout--;
     } else {
@@ -292,7 +336,7 @@ static void draw_bar(uint8_t length, uint8_t bar_byte) {
     char full_width_bar[6] = {bar_byte, bar_byte, bar_byte, bar_byte, bar_byte, bar_byte};
     for (uint8_t i = 0; i < length / 6; i++) {
         oled_write_raw(full_width_bar, 6);
-        oled_advance_char()
+        oled_advance_char();
     }
     char partial_bar[6] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     for (uint8_t i = 0; i < length % 6; i++) {
@@ -381,7 +425,6 @@ static void oled_render_anim(void) {
 }
 
 bool oled_task_user(void) {
-    mod_state = get_mods();
     if (is_keyboard_master()) {
         print_status_narrow();
     } else {
@@ -451,19 +494,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case KC_BSPC:
             if (record->event.pressed && (mod_state & MOD_MASK_ALT)) {
                 tap_code(KC_CAPS);
+                oled_display_mode = OLED_DISPLAY_CAPS_LOCK;
+                info_display_timeout = OLED_INFO_DISPLAY_DURATION;
                 return false;
             }
             is_backspace_down = record->event.pressed;
-            return true;
-        case KC_LCTL:
-            if (record->event.pressed) {
-                if (is_backspace_down) {
-                    register_code(KC_LCTL);
-                    tap_code(KC_BSPC);
-                    unregister_code(KC_LCTL);
-                    return false;
-                }
-            }
             return true;
     }
 
@@ -489,9 +524,33 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             oled_display_mode = OLED_DISPLAY_SPD;
             info_display_timeout = OLED_INFO_DISPLAY_DURATION;
             return true;
+        case KC_LCTL:
+            if (is_backspace_down) {
+                register_code(KC_LCTL);
+                tap_code(KC_BSPC);
+                unregister_code(KC_LCTL);
+                return false;
+            }
+            return true;
+        case KC_SCRL:
+            oled_display_mode = OLED_DISPLAY_SCROLL_LOCK;
+            info_display_timeout = OLED_INFO_DISPLAY_DURATION;
+            return true;
+        case KC_NUM:
+            oled_display_mode = OLED_DISPLAY_NUM_LOCK;
+            info_display_timeout = OLED_INFO_DISPLAY_DURATION;
+            return true;
+        case KC_INT2:
+            oled_display_mode = OLED_DISPLAY_KANA;
+            info_display_timeout = OLED_INFO_DISPLAY_DURATION;
+            return true;
         }
     }
     return true;
+}
+
+void housekeeping_task_user(void) {
+    mod_state = get_mods();
 }
 
 // The rotary encoders I bought send 2 pulses per detent, so we need to halve the signals.
@@ -509,10 +568,19 @@ bool encoder_update_user(uint8_t index, bool clockwise) {
             return false;
         }
 
-        if (clockwise) {
-            tap_code(KC_VOLU);
+        if (mod_state & (MOD_MASK_ALT | MOD_MASK_CTRL)) {
+            if (clockwise) {
+                tap_code(KC_TAB);
+            } else {
+                tap_code16(S(KC_TAB));
+            }
+            return false;
         } else {
-            tap_code(KC_VOLD);
+            if (clockwise) {
+                tap_code(KC_VOLU);
+            } else {
+                tap_code(KC_VOLD);
+            }
         }
     } else if (index == 1) {
         if ((clockwise && encoder_2_state == 1) || (!clockwise && encoder_2_state == -1)) {
