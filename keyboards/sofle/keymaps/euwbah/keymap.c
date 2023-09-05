@@ -44,7 +44,8 @@ enum custom_keycodes {
     KC_RAISE,
     KC_ADJUST,
     KC_NAV,
-    KC_D_MUTE
+    KC_D_MUTE,
+    sPoNgEbOb, // toggle sPoNgEbOb case
 };
 
 enum oled_display_mode_enum {
@@ -58,6 +59,7 @@ enum oled_display_mode_enum {
     OLED_DISPLAY_SCROLL_LOCK,
     OLED_DISPLAY_NUM_LOCK,
     OLED_DISPLAY_KANA,
+    OLED_DISPLAY_SPONGEBOB,
 };
 
 // sent using the USER_SYNC_HOST_UTIL transaction ID.
@@ -71,6 +73,10 @@ typedef struct _m_to_s_host_util_t {
     uint8_t gpu_temp;
     uint8_t gpu1_usage;
 } m_to_s_host_util_t;
+
+typedef struct _m_to_s_data {
+    bool sPoNgEbOb_case_active;
+} m_to_s_data_t;
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   [_QWERTY] = LAYOUT(
@@ -173,7 +179,7 @@ KC_INT5: Muhenkan
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
   _______,  KC_MINS, KC_P4,  KC_P5,   KC_P6,  KC_SLSH,                   KC_PGDN, KC_LEFT,  KC_DOWN, KC_RGHT, _______, _______,
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
-  _______,  KC_PLUS, KC_P1, KC_P2,    KC_P3,  KC_ASTR,_______,    _______,KC_DEL, KC_INS,  KC_PSCR,  KC_SCRL, _______, _______,
+  _______,  KC_PLUS, KC_P1, KC_P2,    KC_P3,  KC_ASTR,_______, sPoNgEbOb,KC_DEL, KC_INS,  KC_PSCR,  KC_SCRL, _______, _______, // toggle sPoNgEbOb case
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
               KC_P0, KC_PDOT, KC_EQL, _______, KC_INT5,          _______, KC_INT1, KC_INT2, KC_INT3, KC_INT4
   //            \--------+--------+--------+---------+-------|   |--------+---------+--------+---------+-------/
@@ -190,6 +196,9 @@ static uint8_t gpu1_usage = 0;
 
 static uint8_t mod_state;
 static bool is_backspace_down = false;
+static bool sPoNgEbOb_case_active = false;
+static bool sPoNgEbOb_state = false; // automatically toggles when alphabets and shift is pressed.
+static bool last_synced_sPoNgEbOb_active = true;
 
 // NOTE: Remember u can't assign strings directly to char arrays, you need to strcpy.
 // For info display, a short string describing the value being displayed
@@ -208,8 +217,14 @@ void user_sync_host_util_slave_handler(uint8_t in_buflen, const void* in_data, u
     gpu1_usage = host_util->gpu1_usage;
 }
 
+void user_sync_data_slave_handler(uint8_t in_buflen, const void* in_data, uint8_t out_buflen, void* out_data) {
+    const m_to_s_data_t* data = (const m_to_s_data_t*)in_data;
+    sPoNgEbOb_case_active = data->sPoNgEbOb_case_active;
+}
+
 void keyboard_post_init_user() {
     transaction_register_rpc(USER_SYNC_HOST_UTIL, user_sync_host_util_slave_handler);
+    transaction_register_rpc(USER_SYNC_DATA, user_sync_data_slave_handler);
 }
 
 oled_rotation_t oled_init_user(oled_rotation_t rotation) {
@@ -316,6 +331,14 @@ static void print_status_narrow(void) {
                     oled_write_ln_P(PSTR("OFF"), false);
                 }
                 break;
+            case OLED_DISPLAY_SPONGEBOB:
+                oled_write_P(PSTR("sPbOb"), false);
+                if (sPoNgEbOb_case_active) {
+                    oled_write_ln_P(PSTR("ON"), true);
+                } else {
+                    oled_write_ln_P(PSTR("OFF"), false);
+                }
+                break;
         }
         info_display_timeout--;
     } else {
@@ -368,20 +391,20 @@ static void draw_utilization_bar(uint8_t utilization) {
 #define ANIM_FRAME 250
 
 static uint32_t anim_timer = 0;
-static uint32_t anim_sleep_timer = 0;
+// static uint32_t anim_sleep_timer = 0;
 
 static void oled_render_anim(void) {
-    const uint8_t speed = get_current_wpm();
+    // const uint8_t speed = get_current_wpm();
 
-    if (speed != 0) {
-        oled_on();
-        anim_sleep_timer = timer_read32();
-    } else {
-        if (timer_elapsed32(anim_sleep_timer) > OLED_TIMEOUT) {
-            oled_off();
-            return; // Return cuz any write to the oled will turn it on again.
-        }
-    }
+    // if (speed != 0) {
+    //     oled_on();
+    //     anim_sleep_timer = timer_read32();
+    // } else {
+    //     if (timer_elapsed32(anim_sleep_timer) > OLED_TIMEOUT) {
+    //         oled_off();
+    //         return; // Return cuz any write to the oled will turn it on again.
+    //     }
+    // }
 
     if (timer_elapsed32(anim_timer) > ANIM_FRAME) {
         anim_timer = timer_read32();
@@ -503,6 +526,18 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     }
 
     if (record->event.pressed) {
+        if (sPoNgEbOb_case_active) {
+            if (keycode >= KC_A && keycode <= KC_Z) {
+                sPoNgEbOb_state = !sPoNgEbOb_state;
+                if (sPoNgEbOb_state) {
+                    tap_code16(S(keycode));
+                    return false;
+                }
+            } else if (keycode == KC_LSFT || keycode == KC_RSFT) {
+                sPoNgEbOb_state = !sPoNgEbOb_state;
+                return true;
+            }
+        }
         switch (keycode) {
         case RGB_HUI:
         case RGB_HUD:
@@ -544,6 +579,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             oled_display_mode = OLED_DISPLAY_KANA;
             info_display_timeout = OLED_INFO_DISPLAY_DURATION;
             return true;
+        case sPoNgEbOb:
+            sPoNgEbOb_case_active = !sPoNgEbOb_case_active;
+            oled_display_mode = OLED_DISPLAY_SPONGEBOB;
+            info_display_timeout = OLED_INFO_DISPLAY_DURATION;
+            return false;
         }
     }
     return true;
@@ -551,6 +591,14 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 
 void housekeeping_task_user(void) {
     mod_state = get_mods();
+
+    if (is_keyboard_master()) {
+        if (sPoNgEbOb_case_active != last_synced_sPoNgEbOb_active) {
+            m_to_s_data_t data = {sPoNgEbOb_case_active};
+            transaction_rpc_send(USER_SYNC_DATA, sizeof(data), &data);
+            last_synced_sPoNgEbOb_active = sPoNgEbOb_case_active;
+        }
+    }
 }
 
 // The rotary encoders I bought send 2 pulses per detent, so we need to halve the signals.
@@ -643,6 +691,15 @@ bool rgb_matrix_indicators_user(void) {
         rgb_matrix_set_color(0, 0, rgb_val / 3, rgb_val / 3);
         rgb_matrix_set_color(9, 0, rgb_val, rgb_val);
     } else {
+        rgb_matrix_set_color(0, 0, 0, 0);
+    }
+
+    if (sPoNgEbOb_case_active) {
+        uint8_t rgb_val = rgb_matrix_get_val();
+        rgb_matrix_set_color(36, rgb_val, rgb_val / 2, 0);
+        rgb_matrix_set_color(0, rgb_val, rgb_val / 2, 0);
+    } else {
+        rgb_matrix_set_color(36, 0, 0, 0);
         rgb_matrix_set_color(0, 0, 0, 0);
     }
     return true;
