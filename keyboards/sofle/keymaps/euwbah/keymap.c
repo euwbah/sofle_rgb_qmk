@@ -96,6 +96,7 @@ typedef struct _m_to_s_data {
     // 4 bytes [16]
     // Represents time since last keypress in milliseconds
     uint32_t time_since_last_keypress;
+    uint8_t oled_brightness;
 } m_to_s_data_t;
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -254,6 +255,29 @@ void user_sync_data_slave_handler(uint8_t in_buflen, const void* in_data, uint8_
     sPoNgEbOb_case_active = data->sPoNgEbOb_case_active;
     datetime = data->datetime;
     time_since_last_keypress = data->time_since_last_keypress;
+    oled_set_brightness(data->oled_brightness);
+}
+
+uint32_t last_synced_time = 0;
+
+// Send data from master side to slave side.
+void perform_data_sync(void) {
+    if (is_keyboard_master()) {
+        time_since_last_keypress = timer_elapsed32(last_keypress_timer);
+        m_to_s_data_t sync_data = {
+            cpu_usage, cpu_temp, ram_usage, gpu_usage,
+            gpu_mem_usage, gpu_temp, gpu1_usage,
+            sPoNgEbOb_case_active,
+            datetime,
+            time_since_last_keypress,
+            oled_get_brightness(),
+        };
+        // no need for bidirectional communication, so use transaction_rpc_send instead of
+        // transaction_rpc_exec
+        transaction_rpc_send(USER_SYNC_DATA, sizeof(sync_data), &sync_data);
+        last_synced_sPoNgEbOb_active = sPoNgEbOb_case_active;
+        last_synced_time = timer_read32();
+    }
 }
 
 void keyboard_post_init_user() {
@@ -666,6 +690,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             }
             oled_display_mode = OLED_DISPLAY_OLED_BRIGHTNESS;
             info_display_timeout = OLED_INFO_DISPLAY_DURATION;
+            perform_data_sync();
             return false;
         case OLED_B_DN: ;
             curr_oled_brightness = oled_get_brightness();
@@ -676,31 +701,11 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             }
             oled_display_mode = OLED_DISPLAY_OLED_BRIGHTNESS;
             info_display_timeout = OLED_INFO_DISPLAY_DURATION;
+            perform_data_sync();
             return false;
         }
     }
     return true;
-}
-
-uint32_t last_synced_time = 0;
-
-// Send data from master side to slave side.
-void perform_data_sync(void) {
-    if (is_keyboard_master()) {
-        time_since_last_keypress = timer_elapsed32(last_keypress_timer);
-        m_to_s_data_t sync_data = {
-            cpu_usage, cpu_temp, ram_usage, gpu_usage,
-            gpu_mem_usage, gpu_temp, gpu1_usage,
-            sPoNgEbOb_case_active,
-            datetime,
-            time_since_last_keypress,
-        };
-        // no need for bidirectional communication, so use transaction_rpc_send instead of
-        // transaction_rpc_exec
-        transaction_rpc_send(USER_SYNC_DATA, sizeof(sync_data), &sync_data);
-        last_synced_sPoNgEbOb_active = sPoNgEbOb_case_active;
-        last_synced_time = timer_read32();
-    }
 }
 
 void housekeeping_task_user(void) {
@@ -709,7 +714,6 @@ void housekeeping_task_user(void) {
     if (timer_elapsed32(last_synced_time) > FORCE_DATA_SYNC_TIME || sPoNgEbOb_case_active != last_synced_sPoNgEbOb_active) {
         perform_data_sync();
     }
-
 }
 
 // The rotary encoders I bought send 2 pulses per detent, so we need to halve the signals.
