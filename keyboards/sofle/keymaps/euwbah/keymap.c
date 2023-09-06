@@ -46,6 +46,8 @@ enum custom_keycodes {
     KC_NAV,
     KC_D_MUTE,
     sPoNgEbOb, // toggle sPoNgEbOb case
+    OLED_B_UP, // Increase oled brightness
+    OLED_B_DN, // Decrease oled brightness
 };
 
 enum oled_display_mode_enum {
@@ -60,6 +62,8 @@ enum oled_display_mode_enum {
     OLED_DISPLAY_NUM_LOCK,
     OLED_DISPLAY_KANA,
     OLED_DISPLAY_SPONGEBOB,
+    // Display oled settings when modified.
+    OLED_DISPLAY_OLED_BRIGHTNESS,
 };
 
 typedef union {
@@ -74,8 +78,10 @@ typedef union {
     };
 } datetime_t;
 
-// Sent using USER_SYNC_DATA transaction ID
+// Sent using USER_SYNC_DATA transaction ID.
+// Don't exceed 32 bytes.
 typedef struct _m_to_s_data {
+    // device utilization stats 7 bytes
     uint8_t cpu_usage;
     uint8_t cpu_temp;
     uint8_t ram_usage;
@@ -83,8 +89,13 @@ typedef struct _m_to_s_data {
     uint8_t gpu_mem_usage;
     uint8_t gpu_temp;
     uint8_t gpu1_usage;
+    // spongebob case 1 byte [8]
     bool sPoNgEbOb_case_active;
+    // datetime 4 bytes [12]
     datetime_t datetime;
+    // 4 bytes [16]
+    // Represents time since last keypress in milliseconds
+    uint32_t time_since_last_keypress;
 } m_to_s_data_t;
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -164,11 +175,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //,------------------------------------------------.                    ,---------------------------------------------------.
   EE_CLR,  XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,                   XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
-  QK_BOOT, XXXXXXX,XXXXXXX, XXXXXXX, XXXXXXX, KC_COLEMAKDH,               XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+  QK_BOOT, XXXXXXX,XXXXXXX, XXXXXXX, XXXXXXX, KC_QWERTY,                  XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
-  RGB_TOG, RGB_HUI,RGB_SAI, RGB_VAI, RGB_SPI, KC_COLEMAK,                 XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+  RGB_TOG, RGB_HUI,RGB_SAI, RGB_VAI, RGB_SPI, KC_COLEMAK,                 XXXXXXX,OLED_B_DN,OLED_B_UP,XXXXXXX,XXXXXXX, XXXXXXX,
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
-  RGB_MOD, RGB_HUD,RGB_SAD, RGB_VAD, RGB_SPD, KC_QWERTY,XXXXXXX,   XXXXXXX, XXXXXXX, KC_MPRV, KC_MPLY, KC_MNXT, XXXXXXX, XXXXXXX,
+  RGB_MOD, RGB_HUD,RGB_SAD, RGB_VAD, RGB_SPD,KC_COLEMAKDH,XXXXXXX,XXXXXXX,XXXXXXX, KC_MPRV, KC_MPLY, KC_MNXT, XXXXXXX, XXXXXXX,
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
                    _______, _______, _______, _______, _______,     _______, _______, _______, _______, _______
     //            \--------+--------+--------+---------+-------|   |--------+---------+--------+---------+-------/
@@ -229,6 +240,7 @@ static uint8_t oled_display_mode = OLED_DISPLAY_HUE;
 
 static uint8_t info_display_timeout = 0; // in led update frames
 static uint32_t last_keypress_timer = 0;
+static uint32_t time_since_last_keypress = 0;
 
 void user_sync_data_slave_handler(uint8_t in_buflen, const void* in_data, uint8_t out_buflen, void* out_data) {
     const m_to_s_data_t* data = (const m_to_s_data_t*)in_data;
@@ -241,11 +253,11 @@ void user_sync_data_slave_handler(uint8_t in_buflen, const void* in_data, uint8_
     gpu1_usage = data->gpu1_usage;
     sPoNgEbOb_case_active = data->sPoNgEbOb_case_active;
     datetime = data->datetime;
+    time_since_last_keypress = data->time_since_last_keypress;
 }
 
 void keyboard_post_init_user() {
     transaction_register_rpc(USER_SYNC_DATA, user_sync_data_slave_handler);
-    last_keypress_timer = timer_read32();
 }
 
 oled_rotation_t oled_init_user(oled_rotation_t rotation) {
@@ -360,6 +372,10 @@ static void print_status_narrow(void) {
                     oled_write_ln_P(PSTR("OFF"), false);
                 }
                 break;
+            case OLED_DISPLAY_OLED_BRIGHTNESS:
+                oled_write_ln_P(PSTR("OLED"), false);
+                oled_write_ln(get_u8_str(oled_get_brightness(), ' '), false);
+                break;
         }
         info_display_timeout--;
     } else {
@@ -439,24 +455,11 @@ static void draw_utilization_bar(uint8_t utilization) {
     clear_bar(32-bar_length);
 }
 
-#define ANIM_FRAME 250
+#define ANIM_FRAME 200
 
 static uint32_t anim_timer = 0;
-// static uint32_t anim_sleep_timer = 0;
 
 static void oled_render_anim(void) {
-    // const uint8_t speed = get_current_wpm();
-
-    // if (speed != 0) {
-    //     oled_on();
-    //     anim_sleep_timer = timer_read32();
-    // } else {
-    //     if (timer_elapsed32(anim_sleep_timer) > OLED_TIMEOUT) {
-    //         oled_off();
-    //         return; // Return cuz any write to the oled will turn it on again.
-    //     }
-    // }
-
     if (timer_elapsed32(anim_timer) > ANIM_FRAME) {
         anim_timer = timer_read32();
         uint8_t cursor_y = 0;
@@ -507,8 +510,10 @@ static void oled_render_anim(void) {
 }
 
 bool oled_task_user(void) {
-    if (timer_elapsed32(last_keypress_timer) > OLED_TIMEOUT) {
-        oled_off();
+    if (time_since_last_keypress > CUSTOM_OLED_TIMEOUT) {
+        if (is_oled_on()) {
+            oled_off();
+        }
         return false;
     } else if (!is_oled_on()) {
         oled_on();
@@ -652,25 +657,59 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             oled_display_mode = OLED_DISPLAY_SPONGEBOB;
             info_display_timeout = OLED_INFO_DISPLAY_DURATION;
             return false;
+        case OLED_B_UP: ;
+            uint8_t curr_oled_brightness = oled_get_brightness();
+            if (curr_oled_brightness >= 240) {
+                oled_set_brightness(255);
+            } else {
+                oled_set_brightness(curr_oled_brightness + 16);
+            }
+            oled_display_mode = OLED_DISPLAY_OLED_BRIGHTNESS;
+            info_display_timeout = OLED_INFO_DISPLAY_DURATION;
+            return false;
+        case OLED_B_DN: ;
+            curr_oled_brightness = oled_get_brightness();
+            if (curr_oled_brightness <= 16) {
+                oled_set_brightness(0);
+            } else {
+                oled_set_brightness(curr_oled_brightness - 16);
+            }
+            oled_display_mode = OLED_DISPLAY_OLED_BRIGHTNESS;
+            info_display_timeout = OLED_INFO_DISPLAY_DURATION;
+            return false;
         }
     }
     return true;
 }
 
+uint32_t last_synced_time = 0;
+
+// Send data from master side to slave side.
+void perform_data_sync(void) {
+    if (is_keyboard_master()) {
+        time_since_last_keypress = timer_elapsed32(last_keypress_timer);
+        m_to_s_data_t sync_data = {
+            cpu_usage, cpu_temp, ram_usage, gpu_usage,
+            gpu_mem_usage, gpu_temp, gpu1_usage,
+            sPoNgEbOb_case_active,
+            datetime,
+            time_since_last_keypress,
+        };
+        // no need for bidirectional communication, so use transaction_rpc_send instead of
+        // transaction_rpc_exec
+        transaction_rpc_send(USER_SYNC_DATA, sizeof(sync_data), &sync_data);
+        last_synced_sPoNgEbOb_active = sPoNgEbOb_case_active;
+        last_synced_time = timer_read32();
+    }
+}
+
 void housekeeping_task_user(void) {
     mod_state = get_mods();
 
-    if (is_keyboard_master()) {
-        if (sPoNgEbOb_case_active != last_synced_sPoNgEbOb_active) {
-            m_to_s_data_t data = {
-                cpu_usage, cpu_temp, ram_usage, gpu_usage,
-                gpu_mem_usage, gpu_temp, gpu1_usage,
-                sPoNgEbOb_case_active,
-            };
-            transaction_rpc_send(USER_SYNC_DATA, sizeof(data), &data);
-            last_synced_sPoNgEbOb_active = sPoNgEbOb_case_active;
-        }
+    if (timer_elapsed32(last_synced_time) > FORCE_DATA_SYNC_TIME || sPoNgEbOb_case_active != last_synced_sPoNgEbOb_active) {
+        perform_data_sync();
     }
+
 }
 
 // The rotary encoders I bought send 2 pulses per detent, so we need to halve the signals.
@@ -795,14 +834,6 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
         datetime.minute = data[14];
         datetime.second = data[15];
 
-        m_to_s_data_t sync_data = {
-            cpu_usage, cpu_temp, ram_usage, gpu_usage,
-            gpu_mem_usage, gpu_temp, gpu1_usage,
-            sPoNgEbOb_case_active,
-            datetime
-        };
-        // no need for bidirectional communication, so use transaction_rpc_send instead of
-        // transaction_rpc_exec
-        transaction_rpc_send(USER_SYNC_DATA, sizeof(sync_data), &sync_data);
+        perform_data_sync();
     }
 }

@@ -43,6 +43,12 @@
 #define SPLIT_WPM_ENABLE
 #define SPLIT_LED_STATE_ENABLE
 
+// There's an issue with OLED timeouts on split keyboards - the secondary OLED dies after the set timeout.
+// Disable the QMK's built-in OLED timeout feature, and impl a custom one.
+#define OLED_TIMEOUT 0
+#define CUSTOM_OLED_TIMEOUT 60000
+#undef SPLIT_ACTIVITY_ENABLE
+
 #define WPM_SAMPLE_SECONDS 2
 #define WPM_SAMPLE_PERIODS 18
 
@@ -52,9 +58,10 @@
 
 // transaction ID for custom RPC communication of host utilization stats from master to slave
 #define SPLIT_TRANSACTION_IDS_USER USER_SYNC_DATA
+#define FORCE_DATA_SYNC_TIME 1000 // User config: how often to force data sync in milliseconds.
 #define RPC_M2S_BUFFER_SIZE 32
 
-#define HOUSEKEY_DELAY 10
+#define MOUSEKEY_DELAY 10
 #define MOUSEKEY_INTERVAL 10
 #define MOUSEKEY_MOVE_DELTA 2
 #define MOUSEKEY_MAX_SPEED 10
@@ -70,10 +77,6 @@
 #endif
 #define ENCODER_DIRECTION_FLIP
 
-#define OLED_BRIGHTNESS 255
-#define OLED_FADE_OUT
-#define OLED_TIMEOUT 60000
-#define OLED_FADE_OUT_INTERVAL 10
 
 #define RGBLIGHT_SLEEP
 //
