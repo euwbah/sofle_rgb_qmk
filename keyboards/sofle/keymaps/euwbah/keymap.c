@@ -304,11 +304,11 @@ static void print_status_narrow(void) {
             oled_write_ln_P(PSTR("Clmk"), false);
             break;
         case _COLEMAKDH:
-            oled_write_ln_P(PSTR("CmkDH"), false);
+            oled_write_P(PSTR("CmkDH"), false);
             break;
 
         default:
-            oled_write_ln_P(PSTR("Undef"), false);
+            oled_write_P(PSTR("Undef"), false);
     }
     oled_write_P(PSTR("\n"), false);
     // Print current layer

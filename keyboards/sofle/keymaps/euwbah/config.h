@@ -36,6 +36,8 @@
 #define NO_ACTION_TAPPING // For layer-tap/mod-tap.
 #define NO_ACTION_ONESHOT // For one-shot keys & one-shot mods
 
+#define FORCE_NKRO
+
 // For syncing data across two halves of keyboard.
 #define SPLIT_TRANSPORT_MIRROR
 #define SPLIT_LAYER_STATE_ENABLE
