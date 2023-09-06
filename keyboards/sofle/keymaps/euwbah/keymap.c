@@ -62,9 +62,20 @@ enum oled_display_mode_enum {
     OLED_DISPLAY_SPONGEBOB,
 };
 
-// sent using the USER_SYNC_HOST_UTIL transaction ID.
-// the RPC_M2S_BUFFER_SIZE defaults to 32 (can increase in config.h), so we can send up to 32 uint8_t values.
-typedef struct _m_to_s_host_util_t {
+typedef union {
+    uint32_t _raw;
+    struct {
+        uint8_t month : 4;
+        uint8_t date: 5;
+        uint8_t day_of_week : 3;
+        uint8_t hour : 5;
+        uint8_t minute : 6;
+        uint8_t second : 6;
+    };
+} datetime_t;
+
+// Sent using USER_SYNC_DATA transaction ID
+typedef struct _m_to_s_data {
     uint8_t cpu_usage;
     uint8_t cpu_temp;
     uint8_t ram_usage;
@@ -72,10 +83,8 @@ typedef struct _m_to_s_host_util_t {
     uint8_t gpu_mem_usage;
     uint8_t gpu_temp;
     uint8_t gpu1_usage;
-} m_to_s_host_util_t;
-
-typedef struct _m_to_s_data {
     bool sPoNgEbOb_case_active;
+    datetime_t datetime;
 } m_to_s_data_t;
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -186,6 +195,18 @@ KC_INT5: Muhenkan
 ),
 };
 
+const char *get_u6_str(uint8_t curr_num, char curr_pad) {
+    static char    buf[3]   = {0};
+    static uint8_t last_num = 0xFF;
+    static char    last_pad = '\0';
+    if (last_num == curr_num && last_pad == curr_pad) {
+        return buf;
+    }
+    last_num = curr_num;
+    last_pad = curr_pad;
+    return get_numeric_str(buf, sizeof(buf), curr_num, curr_pad);
+}
+
 static uint8_t cpu_usage = 0;
 static uint8_t cpu_temp = 0;
 static uint8_t ram_usage = 0;
@@ -193,6 +214,8 @@ static uint8_t gpu_usage = 0;
 static uint8_t gpu_mem_usage = 0;
 static uint8_t gpu_temp = 0;
 static uint8_t gpu1_usage = 0;
+
+static datetime_t datetime = {0};
 
 static uint8_t mod_state;
 static bool is_backspace_down = false;
@@ -205,26 +228,24 @@ static bool last_synced_sPoNgEbOb_active = true;
 static uint8_t oled_display_mode = OLED_DISPLAY_HUE;
 
 static uint8_t info_display_timeout = 0; // in led update frames
-
-void user_sync_host_util_slave_handler(uint8_t in_buflen, const void* in_data, uint8_t out_buflen, void* out_data) {
-    const m_to_s_host_util_t* host_util = (const m_to_s_host_util_t*)in_data;
-    cpu_usage = host_util->cpu_usage;
-    cpu_temp = host_util->cpu_temp;
-    ram_usage = host_util->ram_usage;
-    gpu_usage = host_util->gpu_usage;
-    gpu_mem_usage = host_util->gpu_mem_usage;
-    gpu_temp = host_util->gpu_temp;
-    gpu1_usage = host_util->gpu1_usage;
-}
+static uint32_t last_keypress_timer = 0;
 
 void user_sync_data_slave_handler(uint8_t in_buflen, const void* in_data, uint8_t out_buflen, void* out_data) {
     const m_to_s_data_t* data = (const m_to_s_data_t*)in_data;
+    cpu_usage = data->cpu_usage;
+    cpu_temp = data->cpu_temp;
+    ram_usage = data->ram_usage;
+    gpu_usage = data->gpu_usage;
+    gpu_mem_usage = data->gpu_mem_usage;
+    gpu_temp = data->gpu_temp;
+    gpu1_usage = data->gpu1_usage;
     sPoNgEbOb_case_active = data->sPoNgEbOb_case_active;
+    datetime = data->datetime;
 }
 
 void keyboard_post_init_user() {
-    transaction_register_rpc(USER_SYNC_HOST_UTIL, user_sync_host_util_slave_handler);
     transaction_register_rpc(USER_SYNC_DATA, user_sync_data_slave_handler);
+    last_keypress_timer = timer_read32();
 }
 
 oled_rotation_t oled_init_user(oled_rotation_t rotation) {
@@ -350,6 +371,36 @@ static void print_status_narrow(void) {
     oled_write_P(PSTR("WPM"), false);
     oled_set_cursor(0, 12);
     oled_write(get_u8_str(get_current_wpm(), ' '), false);
+
+    if (datetime.month != 0) {
+        oled_set_cursor(0, 14);
+        oled_write(get_u6_str(datetime.month, ' '), false);
+        oled_write_P(PSTR("/"), false);
+        oled_write(get_u6_str(datetime.date, '0'), false);
+        switch (datetime.day_of_week) {
+        case 0:
+            oled_write_P(PSTR("Mon"), false);
+            break;
+        case 1:
+            oled_write_P(PSTR("Tue"), false);
+            break;
+        case 2:
+            oled_write_P(PSTR("Wed"), false);
+            break;
+        case 3:
+            oled_write_P(PSTR("Thu"), false);
+            break;
+        case 4:
+            oled_write_P(PSTR("Fri"), false);
+            break;
+        case 5:
+            oled_write_P(PSTR("Sat"), false);
+            break;
+        case 6:
+            oled_write_P(PSTR("Sun"), false);
+            break;
+        }
+    }
 }
 
 // lines is the length of the bar in pixels
@@ -444,10 +495,24 @@ static void oled_render_anim(void) {
         oled_write_P(PSTR("GPU1"), false);
         oled_set_cursor(0, cursor_y++);
         draw_utilization_bar(gpu1_usage);
+
+        if (datetime.month != 0) {
+            oled_set_cursor(0, cursor_y++);
+            oled_write(get_u6_str(datetime.hour, '0'), false);
+            oled_write_P(PSTR(":"), false);
+            oled_write(get_u6_str(datetime.minute, '0'), false);
+            oled_write(get_u6_str(datetime.second, '0'), false);
+        }
     }
 }
 
 bool oled_task_user(void) {
+    if (timer_elapsed32(last_keypress_timer) > OLED_TIMEOUT) {
+        oled_off();
+        return false;
+    } else if (!is_oled_on()) {
+        oled_on();
+    }
     if (is_keyboard_master()) {
         print_status_narrow();
     } else {
@@ -457,6 +522,9 @@ bool oled_task_user(void) {
 }
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    if (record->event.pressed) {
+        last_keypress_timer = timer_read32();
+    }
     switch (keycode) {
         case KC_QWERTY:
             if (record->event.pressed) {
@@ -594,7 +662,11 @@ void housekeeping_task_user(void) {
 
     if (is_keyboard_master()) {
         if (sPoNgEbOb_case_active != last_synced_sPoNgEbOb_active) {
-            m_to_s_data_t data = {sPoNgEbOb_case_active};
+            m_to_s_data_t data = {
+                cpu_usage, cpu_temp, ram_usage, gpu_usage,
+                gpu_mem_usage, gpu_temp, gpu1_usage,
+                sPoNgEbOb_case_active,
+            };
             transaction_rpc_send(USER_SYNC_DATA, sizeof(data), &data);
             last_synced_sPoNgEbOb_active = sPoNgEbOb_case_active;
         }
@@ -716,9 +788,21 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
         gpu_temp = data[6];
         gpu1_usage = data[7];
 
-        m_to_s_host_util_t host_util_data = {cpu_usage, cpu_temp, ram_usage, gpu_usage, gpu_mem_usage, gpu_temp, gpu1_usage};
+        datetime.month = data[10];
+        datetime.date = data[11];
+        datetime.day_of_week = data[12];
+        datetime.hour = data[13];
+        datetime.minute = data[14];
+        datetime.second = data[15];
+
+        m_to_s_data_t sync_data = {
+            cpu_usage, cpu_temp, ram_usage, gpu_usage,
+            gpu_mem_usage, gpu_temp, gpu1_usage,
+            sPoNgEbOb_case_active,
+            datetime
+        };
         // no need for bidirectional communication, so use transaction_rpc_send instead of
         // transaction_rpc_exec
-        transaction_rpc_send(USER_SYNC_HOST_UTIL, sizeof(host_util_data), &host_util_data);
+        transaction_rpc_send(USER_SYNC_DATA, sizeof(sync_data), &sync_data);
     }
 }
