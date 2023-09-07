@@ -6,11 +6,11 @@ Features:
 - aUtOmAtEd SpOnGeBoB cAsE (Nav + press right encoder to toggle)
 - Rotary encoder double signal per detent correction
 - Backspace is where CapsLock is (as per official Colemak layout)
-- Ctrl+Backspace (backspace word) can be accessed with pinky pressing both keys at once, order doesn't matter.
+- Ctrl+Backspace (backspace word shortcut) can be accessed with pinky pressing both keys at once, order doesn't matter.
 - CapsLock is accessed with Alt+Backspace
-- Left rotary encoder is volume control, mute on click. When alt/ctrl is held down, does alt+tab/alt+shift+tab/ctrl+tab/ctrl+shift+tab.
-- Right rotary encoder is mouse scroll, up/down arrow keys on Lower layer, left/right arrow keys on Raise layer, Ctrl+Shift+left/right word select on Nav layer.
-- Shift is left thumb.
+- Left rotary encoder: volume control, mute on click. When alt/ctrl is held down, does alt+tab/alt+shift+tab/ctrl+tab/ctrl+shift+tab.
+- Right rotary encoder: left/right arrow keys, up/down arrow keys on Lower layer, mouse scroll on Raise layer, Ctrl+Shift+left/right word select on Nav layer.
+- Shift is on the left thumb.
 - Parentheses, grave/backtick, underscore are accessible from the base layer.
 - Navigation layer, with arrow keys, home, end, Print Screen on the right, and num pad on the left.
 - Raise layer accesses all numbers, symbols, and function keys.
