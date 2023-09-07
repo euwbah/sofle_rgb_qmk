@@ -95,7 +95,7 @@ typedef struct _m_to_s_data {
     datetime_t datetime;
     // 4 bytes [16]
     // Represents time since last keypress in milliseconds
-    uint32_t time_since_last_keypress;
+    uint32_t last_keypress_timer;
     uint8_t oled_brightness;
 } m_to_s_data_t;
 
@@ -241,7 +241,6 @@ static uint8_t oled_display_mode = OLED_DISPLAY_HUE;
 
 static uint8_t info_display_timeout = 0; // in led update frames
 static uint32_t last_keypress_timer = 0;
-static uint32_t time_since_last_keypress = 0;
 
 void user_sync_data_slave_handler(uint8_t in_buflen, const void* in_data, uint8_t out_buflen, void* out_data) {
     const m_to_s_data_t* data = (const m_to_s_data_t*)in_data;
@@ -254,7 +253,7 @@ void user_sync_data_slave_handler(uint8_t in_buflen, const void* in_data, uint8_
     gpu1_usage = data->gpu1_usage;
     sPoNgEbOb_case_active = data->sPoNgEbOb_case_active;
     datetime = data->datetime;
-    time_since_last_keypress = data->time_since_last_keypress;
+    last_keypress_timer = data->last_keypress_timer;
     oled_set_brightness(data->oled_brightness);
 }
 
@@ -263,13 +262,12 @@ uint32_t last_synced_time = 0;
 // Send data from master side to slave side.
 void perform_data_sync(void) {
     if (is_keyboard_master()) {
-        time_since_last_keypress = timer_elapsed32(last_keypress_timer);
         m_to_s_data_t sync_data = {
             cpu_usage, cpu_temp, ram_usage, gpu_usage,
             gpu_mem_usage, gpu_temp, gpu1_usage,
             sPoNgEbOb_case_active,
             datetime,
-            time_since_last_keypress,
+            last_keypress_timer,
             oled_get_brightness(),
         };
         // no need for bidirectional communication, so use transaction_rpc_send instead of
@@ -534,7 +532,7 @@ static void oled_render_anim(void) {
 }
 
 bool oled_task_user(void) {
-    if (time_since_last_keypress > CUSTOM_OLED_TIMEOUT) {
+    if (sync_timer_elapsed32(last_keypress_timer) > CUSTOM_OLED_TIMEOUT) {
         if (is_oled_on()) {
             oled_off();
         }
@@ -552,7 +550,7 @@ bool oled_task_user(void) {
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     if (record->event.pressed) {
-        last_keypress_timer = timer_read32();
+        last_keypress_timer = sync_timer_read32();
     }
     switch (keycode) {
         case KC_QWERTY:
