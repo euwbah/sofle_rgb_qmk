@@ -717,17 +717,17 @@ void housekeeping_task_user(void) {
 // The rotary encoders I bought send 2 pulses per detent, so we need to halve the signals.
 // A value of 0 represents no pulse received, requires 2 pulses in the same direction to send an action.
 // A value of 1 represents 1 pulse received clockwize, -1 represents 1 pulse anti-clockwise.
-static int8_t encoder_1_state = 0;
-static int8_t encoder_2_state = 0;
+// static int8_t encoder_1_state = 0;
+// static int8_t encoder_2_state = 0;
 
 bool encoder_update_user(uint8_t index, bool clockwise) {
     if (index == 0) {
-        if ((clockwise && encoder_1_state == 1) || (!clockwise && encoder_1_state == -1)) {
-            encoder_1_state = 0;
-        } else {
-            encoder_1_state = clockwise ? 1 : -1;
-            return false;
-        }
+        // if ((clockwise && encoder_1_state == 1) || (!clockwise && encoder_1_state == -1)) {
+        //     encoder_1_state = 0;
+        // } else {
+        //     encoder_1_state = clockwise ? 1 : -1;
+        //     return false;
+        // }
 
         if (mod_state & (MOD_MASK_ALT | MOD_MASK_CTRL)) {
             if (clockwise) {
@@ -744,12 +744,12 @@ bool encoder_update_user(uint8_t index, bool clockwise) {
             }
         }
     } else if (index == 1) {
-        if ((clockwise && encoder_2_state == 1) || (!clockwise && encoder_2_state == -1)) {
-            encoder_2_state = 0;
-        } else {
-            encoder_2_state = clockwise ? 1 : -1;
-            return false;
-        }
+        // if ((clockwise && encoder_2_state == 1) || (!clockwise && encoder_2_state == -1)) {
+        //     encoder_2_state = 0;
+        // } else {
+        //     encoder_2_state = clockwise ? 1 : -1;
+        //     return false;
+        // }
 
         switch (get_highest_layer(layer_state)) {
         // case _COLEMAK:
@@ -802,15 +802,12 @@ bool rgb_matrix_indicators_user(void) {
     if (host_keyboard_led_state().caps_lock) {
         uint8_t rgb_val = rgb_matrix_get_val();
         rgb_matrix_set_color(0, 0, rgb_val / 3, rgb_val / 3);
+        rgb_matrix_set_color(36, 0, rgb_val / 3, rgb_val / 3);
         rgb_matrix_set_color(9, 0, rgb_val, rgb_val);
-    } else {
-        rgb_matrix_set_color(0, 0, 0, 0);
-    }
-
-    if (sPoNgEbOb_case_active) {
+    } else if (sPoNgEbOb_case_active) {
         uint8_t rgb_val = rgb_matrix_get_val();
-        rgb_matrix_set_color(36, rgb_val, rgb_val / 2, 0);
-        rgb_matrix_set_color(0, rgb_val, rgb_val / 2, 0);
+        rgb_matrix_set_color(36, rgb_val * 3/5, rgb_val / 4, 0);
+        rgb_matrix_set_color(0, rgb_val * 3/5, rgb_val / 4, 0);
     } else {
         rgb_matrix_set_color(36, 0, 0, 0);
         rgb_matrix_set_color(0, 0, 0, 0);
