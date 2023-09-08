@@ -159,9 +159,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
   KC_F13,   KC_F14, KC_F15,  KC_F16,   KC_F17,  KC_F18,                   KC_F19,  KC_F20,  KC_F21,  KC_F22,  KC_F23,  KC_F24,
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
-  _______,C(S(KC_ESC)),C(A(KC_DEL)),KC_PSCR,KC_WH_U,KC_WH_L,              KC_BRIU, KC_VOLU, KC_BTN1, KC_MS_U, KC_BTN2, KC_BTN4,
+  _______,C(S(KC_ESC)),C(A(KC_DEL)),KC_PSCR,KC_NO,KC_NO,                  KC_BRIU, KC_VOLU, KC_BTN1, KC_MS_U, KC_BTN2, KC_BTN4,
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
-  _______,  KC_NO,  KC_NO,   KC_NO,    KC_WH_D, KC_WH_R,_______, _______, KC_BRID, KC_VOLD, KC_MS_L, KC_MS_D, KC_MS_R, KC_BTN5,
+  _______,  KC_NO,  KC_NO,   KC_NO,    KC_NO,   KC_NO,  _______, _______, KC_BRID, KC_VOLD, KC_MS_L, KC_MS_D, KC_MS_R, KC_BTN5,
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
             C(G(KC_LEFT)),C(G(KC_RGHT)),_______,_______,QK_BOOT, _______, KC_BTN8, _______, KC_BTN7, KC_BTN3
   //            \--------+--------+--------+---------+-------|   |--------+---------+--------+---------+-------/
@@ -255,6 +255,8 @@ static uint8_t oled_display_mode = OLED_DISPLAY_HUE;
 
 static uint8_t info_display_timeout = 0; // in led update frames
 static uint32_t last_keypress_timer = 0;
+static uint32_t send_hid_user_data_timer = 0; // Wait for a bit before sending HID user data to host.
+static bool hid_user_data_sent = false;
 
 void user_sync_data_slave_handler(uint8_t in_buflen, const void* in_data, uint8_t out_buflen, void* out_data) {
     const m_to_s_data_t* data = (const m_to_s_data_t*)in_data;
@@ -635,6 +637,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case KC_NAV:
             if (record->event.pressed) {
                 layer_on(_NAV);
+                oled_display_mode = OLED_DISPLAY_NUM_LOCK;
+                info_display_timeout = OLED_INFO_DISPLAY_DURATION;
             } else {
                 layer_off(_NAV);
             }
@@ -753,6 +757,11 @@ void housekeeping_task_user(void) {
         || force_sync_retry) {
         perform_data_sync();
     }
+
+    if (timer_elapsed32(send_hid_user_data_timer) > HID_SEND_DATA_DELAY && !hid_user_data_sent) {
+        send_hid_user_data();
+        hid_user_data_sent = true;
+    }
 }
 
 // The rotary encoders I bought send 2 pulses per detent, so we need to halve the signals.
@@ -803,7 +812,8 @@ bool encoder_update_user(uint8_t index, bool clockwise) {
                     info_display_timeout = OLED_INFO_DISPLAY_DURATION;
                 }
                 eeconfig_update_user(user_config._raw);
-                send_hid_user_data();
+                hid_user_data_sent = false;
+                send_hid_user_data_timer = timer_read32();
                 return false;
             case _NAV:
                 if (clockwise) {
@@ -820,7 +830,8 @@ bool encoder_update_user(uint8_t index, bool clockwise) {
                 oled_display_mode = OLED_DISPLAY_EXT_MONITOR_CONTRAST;
                 info_display_timeout = OLED_INFO_DISPLAY_DURATION;
                 eeconfig_update_user(user_config._raw);
-                send_hid_user_data();
+                hid_user_data_sent = false;
+                send_hid_user_data_timer = timer_read32();
                 return false;
             default:
                 if (clockwise) {
@@ -898,6 +909,16 @@ bool rgb_matrix_indicators_user(void) {
     } else {
         rgb_matrix_set_color(36, 0, 0, 0);
         rgb_matrix_set_color(0, 0, 0, 0);
+    }
+
+    if (get_highest_layer(layer_state) == _NAV) {
+        // display num_lock state
+        uint8_t rgb_val = rgb_matrix_get_val();
+        if (host_keyboard_led_state().num_lock) {
+            rgb_matrix_set_color(32, 0, rgb_val / 2, rgb_val / 4);
+        } else {
+            rgb_matrix_set_color(32, rgb_val / 2, rgb_val / 8, 0);
+        }
     }
     return true;
 }

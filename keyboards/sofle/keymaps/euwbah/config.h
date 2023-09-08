@@ -57,6 +57,7 @@
 // These are default HID Usage page and IDs in QMK.
 #define RAW_USAGE_PAGE 0xFF60
 #define RAW_USAGE_ID 0x61
+#define HID_SEND_DATA_DELAY 100 // How to long wait after data change before updating HID data (ms).
 
 // transaction ID for custom RPC communication of host utilization stats from master to slave
 #define SPLIT_TRANSACTION_IDS_USER USER_SYNC_DATA
