@@ -8,8 +8,17 @@ Features:
 - Backspace is where CapsLock is (as per official Colemak layout)
 - Ctrl+Backspace (backspace word shortcut) can be accessed with pinky pressing both keys at once, order doesn't matter.
 - CapsLock is accessed with Alt+Backspace
-- Left rotary encoder: volume control, mute on click. When alt/ctrl is held down, does alt+tab/alt+shift+tab/ctrl+tab/ctrl+shift+tab.
-- Right rotary encoder: left/right arrow keys, up/down arrow keys on Lower layer, mouse scroll on Raise layer, Ctrl+Shift+left/right word select on Nav layer.
+- Left rotary encoder:
+  - volume control, mute on click
+  - When alt/ctrl is held down, does alt+tab/alt+shift+tab/ctrl+tab/ctrl+shift+tab.
+  - Lower layer: brightness control.
+  - Raise layer: external monitor brightness control (requires [HID Info Sender](https://github.com/euwbah/hid-info-sender))
+  - Nav layer: external monitor contrast control (requires [HID Info Sender](https://github.com/euwbah/hid-info-sender))
+- Right rotary encoder:
+  - left/right arrow keys
+  - Lower layer: up/down arrow keys
+  - Raise layer: mouse scroll
+  - Nav layer: Ctrl+Shift+left/right
 - Shift is on the left thumb.
 - Parentheses, grave/backtick, underscore are accessible from the base layer.
 - Navigation layer, with arrow keys, home, end, Print Screen on the right, and num pad on the left.
