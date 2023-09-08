@@ -19,6 +19,7 @@
 
 // This include is required for using rpc transactions between master and slave
 #include "transactions.h"
+#include "raw_hid.h"
 
 #include QMK_KEYBOARD_H
 
@@ -64,6 +65,8 @@ enum oled_display_mode_enum {
     OLED_DISPLAY_SPONGEBOB,
     // Display oled settings when modified.
     OLED_DISPLAY_OLED_BRIGHTNESS,
+    OLED_DISPLAY_EXT_MONITOR_BRIGHTNESS,
+    OLED_DISPLAY_EXT_MONITOR_CONTRAST,
 };
 
 typedef union {
@@ -77,6 +80,14 @@ typedef union {
         uint8_t second : 6;
     };
 } datetime_t;
+
+typedef union {
+    uint16_t _raw;
+    struct {
+        uint8_t ext_monitor_brightness : 7;
+        uint8_t ext_monitor_contrast : 7;
+    };
+} user_config_t;
 
 // Sent using USER_SYNC_DATA transaction ID.
 // Don't exceed 32 bytes.
@@ -229,6 +240,9 @@ static uint8_t gpu1_usage = 0;
 
 static datetime_t datetime = {0};
 
+// For storing in EEPROM.
+static user_config_t user_config;
+
 static uint8_t mod_state;
 static bool is_backspace_down = false;
 static bool sPoNgEbOb_case_active = false;
@@ -257,10 +271,13 @@ void user_sync_data_slave_handler(uint8_t in_buflen, const void* in_data, uint8_
     oled_set_brightness(data->oled_brightness);
 }
 
-uint32_t last_synced_time = 0;
+static uint32_t last_synced_time = 0;
+// Set to true when sync failed to immediately retry on the next housekeeping_task iteration.
+static bool force_sync_retry = false;
 
 // Send data from master side to slave side.
-void perform_data_sync(void) {
+// returns `true` if sync successful, otherwise `false`.
+bool perform_data_sync(void) {
     if (is_keyboard_master()) {
         m_to_s_data_t sync_data = {
             cpu_usage, cpu_temp, ram_usage, gpu_usage,
@@ -272,13 +289,27 @@ void perform_data_sync(void) {
         };
         // no need for bidirectional communication, so use transaction_rpc_send instead of
         // transaction_rpc_exec
-        transaction_rpc_send(USER_SYNC_DATA, sizeof(sync_data), &sync_data);
         last_synced_sPoNgEbOb_active = sPoNgEbOb_case_active;
         last_synced_time = timer_read32();
+        bool sync_success = transaction_rpc_send(USER_SYNC_DATA, sizeof(sync_data), &sync_data);
+        force_sync_retry = !sync_success;
+        return sync_success;
     }
+    return true; // if slave keyboard calls this function, no need to do anything/retry.
+}
+
+void  send_hid_user_data(void) {
+    // Send 0x01, <external monitor brightness>, <contrast>
+    uint8_t bytes[32];
+    memset(bytes, 0, sizeof(bytes));
+    bytes[0] = 0x01;
+    bytes[1] = user_config.ext_monitor_brightness;
+    bytes[2] = user_config.ext_monitor_contrast;
+    raw_hid_send(bytes, 32);
 }
 
 void keyboard_post_init_user() {
+    user_config._raw = eeconfig_read_user();
     transaction_register_rpc(USER_SYNC_DATA, user_sync_data_slave_handler);
 }
 
@@ -397,6 +428,14 @@ static void print_status_narrow(void) {
             case OLED_DISPLAY_OLED_BRIGHTNESS:
                 oled_write_ln_P(PSTR("OLED"), false);
                 oled_write_ln(get_u8_str(oled_get_brightness(), ' '), false);
+                break;
+            case OLED_DISPLAY_EXT_MONITOR_BRIGHTNESS:
+                oled_write_P(PSTR("BRGHT"), false);
+                oled_write_ln(get_u8_str(user_config.ext_monitor_brightness, ' '), false);
+                break;
+            case OLED_DISPLAY_EXT_MONITOR_CONTRAST:
+                oled_write_ln_P(PSTR("CONT"), false);
+                oled_write_ln(get_u8_str(user_config.ext_monitor_contrast, ' '), false);
                 break;
         }
         info_display_timeout--;
@@ -709,7 +748,9 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 void housekeeping_task_user(void) {
     mod_state = get_mods();
 
-    if (timer_elapsed32(last_synced_time) > FORCE_DATA_SYNC_TIME || sPoNgEbOb_case_active != last_synced_sPoNgEbOb_active) {
+    if (timer_elapsed32(last_synced_time) > FORCE_DATA_SYNC_TIME
+        || sPoNgEbOb_case_active != last_synced_sPoNgEbOb_active
+        || force_sync_retry) {
         perform_data_sync();
     }
 }
@@ -737,10 +778,56 @@ bool encoder_update_user(uint8_t index, bool clockwise) {
             }
             return false;
         } else {
-            if (clockwise) {
-                tap_code(KC_VOLU);
-            } else {
-                tap_code(KC_VOLD);
+            switch (get_highest_layer(layer_state)) {
+            case _LOWER:
+                if (clockwise) {
+                    tap_code(KC_BRIU);
+                } else {
+                    tap_code(KC_BRID);
+                }
+                return false;
+            case _RAISE:
+                if (clockwise) {
+                    user_config.ext_monitor_brightness += 5;
+                    if (user_config.ext_monitor_brightness > 100) {
+                        user_config.ext_monitor_brightness = 100;
+                    }
+                    oled_display_mode = OLED_DISPLAY_EXT_MONITOR_BRIGHTNESS;
+                    info_display_timeout = OLED_INFO_DISPLAY_DURATION;
+                } else {
+                    user_config.ext_monitor_brightness -= 5;
+                    if (user_config.ext_monitor_brightness >= 100) {
+                        user_config.ext_monitor_brightness = 0;
+                    }
+                    oled_display_mode = OLED_DISPLAY_EXT_MONITOR_BRIGHTNESS;
+                    info_display_timeout = OLED_INFO_DISPLAY_DURATION;
+                }
+                eeconfig_update_user(user_config._raw);
+                send_hid_user_data();
+                return false;
+            case _NAV:
+                if (clockwise) {
+                    user_config.ext_monitor_contrast += 5;
+                    if (user_config.ext_monitor_contrast > 100) {
+                        user_config.ext_monitor_contrast = 100;
+                    }
+                } else {
+                    user_config.ext_monitor_contrast -= 5;
+                    if (user_config.ext_monitor_contrast >= 100) {
+                        user_config.ext_monitor_contrast = 0;
+                    }
+                }
+                oled_display_mode = OLED_DISPLAY_EXT_MONITOR_CONTRAST;
+                info_display_timeout = OLED_INFO_DISPLAY_DURATION;
+                eeconfig_update_user(user_config._raw);
+                send_hid_user_data();
+                return false;
+            default:
+                if (clockwise) {
+                    tap_code(KC_VOLU);
+                } else {
+                    tap_code(KC_VOLD);
+                }
             }
         }
     } else if (index == 1) {
