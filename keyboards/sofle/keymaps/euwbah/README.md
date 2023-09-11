@@ -23,7 +23,13 @@ Features:
   - Nav layer: Ctrl+Shift+left/right
 - Shift is on the left thumb.
 - Parentheses, grave/backtick, underscore are accessible from the base layer.
-- Navigation layer, with arrow keys, home, end, Print Screen on the right, and num pad on the left.
+- Navigation layer:
+  - IJKL = arrow keys
+  - UO = home, end
+  - Num pad on the left side
+  - Underscore = Ctrl+Alt+Backspace: Remove bracket (VSCode)
+  - ' = Ctrl+Alt+]: Select to bracket (VSCode)
+  - Enter = Ctrl+Shift+\: Go to bracket (VSCode)
 - Raise layer: numbers, symbols, function, and language keys
 - Lower layer:
   - Macros:

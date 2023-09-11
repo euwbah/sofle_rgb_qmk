@@ -207,13 +207,13 @@ KC_INT5: Muhenkan
   //,------------------------------------------------.                    ,---------------------------------------------------.
   TG(_NAV), KC_PIPE, KC_LPRN, KC_RPRN, KC_AMPR, KC_NUM,                   KC_BRK, KC_PSCR,  _______, _______, XXXXXXX, XXXXXXX,
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
-  _______,  KC_CIRC, KC_P7,   KC_P8,   KC_P9,   KC_PERC,                  KC_PGUP, KC_HOME, KC_UP,   KC_END,  _______, XXXXXXX,
+  _______,  KC_CIRC, KC_P7,   KC_P8,   KC_P9,   KC_PERC,                  KC_PGUP, KC_HOME, KC_UP,   KC_END,  _______, C(A(KC_BSPC)),
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
-  _______,  KC_MINS, KC_P4,   KC_P5,   KC_P6,   KC_SLSH,                  KC_PGDN, KC_LEFT, KC_DOWN, KC_RGHT, _______, _______,
+  _______,  KC_MINS, KC_P4,   KC_P5,   KC_P6,   KC_SLSH,                  KC_PGDN, KC_LEFT, KC_DOWN, KC_RGHT, _______, C(A(KC_RBRC)),
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
-  _______,  KC_PLUS, KC_P1,   KC_P2,   KC_P3,   KC_ASTR,_______,sPoNgEbOb,KC_DEL,  KC_INS,  KC_NO,   KC_SCRL, _______, _______,
+  _______,  KC_PLUS, KC_P1,   KC_P2,   KC_P3,   KC_ASTR,_______,sPoNgEbOb,KC_DEL,  KC_INS,  KC_NO,   KC_SCRL, _______, C(S(KC_BSLS)),
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
-              KC_P0, KC_PDOT, KC_EQL, _______, KC_INT5,          _______, KC_INT1, KC_INT2, KC_INT3, KC_INT4
+            _______, KC_P0,   KC_PDOT, KC_EQL,  KC_INT5,         _______, KC_INT1, KC_INT2, KC_INT3, KC_INT4
   //            \--------+--------+--------+---------+-------|   |--------+---------+--------+---------+-------/
 ),
 };
@@ -339,7 +339,7 @@ static void print_status_narrow(void) {
             break;
 
         default:
-            oled_write_P(PSTR("Undef"), false);
+            oled_write_ln_P(PSTR(""), false);
     }
     oled_write_P(PSTR("\n"), false);
     // Print current layer
@@ -364,10 +364,10 @@ static void print_status_narrow(void) {
             oled_write_ln_P(PSTR("Nav"), false);
             break;
         default:
-            oled_write_P(PSTR("Undef"), false);
+            oled_write_ln_P(PSTR(""), false);
     }
 
-    oled_write_P(PSTR("\n"), false);
+    oled_write_ln_P(PSTR(""), false);
 
     if (info_display_timeout > 0) {
         switch (oled_display_mode) {
@@ -875,13 +875,9 @@ bool encoder_update_user(uint8_t index, bool clockwise) {
             return false;
         case _NAV:
             if (clockwise) {
-                register_mods(MOD_MASK_CS);
-                tap_code(KC_RGHT);
-                unregister_mods(MOD_MASK_CS);
+                tap_code16(C(S(KC_RGHT)));
             } else {
-                register_mods(MOD_MASK_CS);
-                tap_code(KC_LEFT);
-                unregister_mods(MOD_MASK_CS);
+                tap_code16(C(S(KC_LEFT)));
             }
             return false;
         default:
