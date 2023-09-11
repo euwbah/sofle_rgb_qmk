@@ -155,13 +155,13 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
 [_LOWER] = LAYOUT(
   //,------------------------------------------------.                    ,---------------------------------------------------.
-  KC_F1,    KC_F2,  KC_F3,   A(KC_F4), KC_F5,   S(KC_F6),                 KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,  A(KC_F12),
+  KC_F1,    KC_F2,  KC_F3,   KC_F4,    KC_F5,   KC_F6,                    KC_F7,   KC_F8,   KC_F9,   KC_F10,  KC_F11,  KC_F12,
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
   KC_F13,   KC_F14, KC_F15,  KC_F16,   KC_F17,  KC_F18,                   KC_F19,  KC_F20,  KC_F21,  KC_F22,  KC_F23,  KC_F24,
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
-  _______,C(S(KC_ESC)),C(A(KC_DEL)),KC_PSCR,KC_NO,KC_NO,                  KC_BRIU, KC_VOLU, KC_BTN1, KC_MS_U, KC_BTN2, KC_BTN4,
+  A(KC_F4),C(S(KC_ESC)),C(A(KC_DEL)),KC_PSCR,KC_NO,KC_NO,                 KC_BRIU, KC_VOLU, KC_BTN1, KC_MS_U, KC_BTN2, KC_BTN4,
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
-  _______,  KC_NO,  KC_NO,   KC_NO,    KC_NO,   KC_NO,  _______, _______, KC_BRID, KC_VOLD, KC_MS_L, KC_MS_D, KC_MS_R, KC_BTN5,
+  C(S(KC_P)),C(A(KC_J)),A(KC_F12),A(KC_J),S(KC_F6),C(A(KC_V)),TO(_NAV),_______,KC_BRID,KC_VOLD, KC_MS_L, KC_MS_D, KC_MS_R, KC_BTN5,
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
             C(G(KC_LEFT)),C(G(KC_RGHT)),_______,_______,QK_BOOT, _______, KC_BTN8, _______, KC_BTN7, KC_BTN3
   //            \--------+--------+--------+---------+-------|   |--------+---------+--------+---------+-------/
@@ -187,11 +187,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //,------------------------------------------------.                    ,---------------------------------------------------.
   EE_CLR,  XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,                   XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
-  QK_BOOT, XXXXXXX,XXXXXXX, XXXXXXX, XXXXXXX, KC_QWERTY,                  XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
+  QK_BOOT, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, KC_QWERTY,                 XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX,
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
-  RGB_TOG, RGB_HUI,RGB_SAI, RGB_VAI, RGB_SPI, KC_COLEMAK,                 XXXXXXX,OLED_B_DN,OLED_B_UP,XXXXXXX,XXXXXXX, XXXXXXX,
+  RGB_TOG, RGB_HUI, RGB_SAI, RGB_VAI, RGB_SPI, KC_COLEMAK,                XXXXXXX,OLED_B_DN,OLED_B_UP,XXXXXXX,XXXXXXX, XXXXXXX,
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
-  RGB_MOD, RGB_HUD,RGB_SAD, RGB_VAD, RGB_SPD,KC_COLEMAKDH,XXXXXXX,XXXXXXX,XXXXXXX, KC_MPRV, KC_MPLY, KC_MNXT, XXXXXXX, XXXXXXX,
+  RGB_MOD, RGB_HUD, RGB_SAD, RGB_VAD,RGB_SPD,KC_COLEMAKDH,XXXXXXX,XXXXXXX,XXXXXXX, KC_MPRV, KC_MPLY, KC_MNXT, XXXXXXX, XXXXXXX,
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
                    _______, _______, _______, _______, _______,     _______, _______, _______, _______, _______
     //            \--------+--------+--------+---------+-------|   |--------+---------+--------+---------+-------/
@@ -205,13 +205,13 @@ KC_INT5: Muhenkan
 */
 [_NAV] = LAYOUT(
   //,------------------------------------------------.                    ,---------------------------------------------------.
-  _______, KC_PIPE, KC_LPRN, KC_RPRN, KC_AMPR, KC_NUM,                   KC_BRK, KC_PSCR,  _______, _______, XXXXXXX, XXXXXXX,
+  TG(_NAV), KC_PIPE, KC_LPRN, KC_RPRN, KC_AMPR, KC_NUM,                   KC_BRK, KC_PSCR,  _______, _______, XXXXXXX, XXXXXXX,
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
-  _______,  KC_CIRC, KC_P7,  KC_P8,   KC_P9,  KC_PERC,                   KC_PGUP, KC_HOME, KC_UP,   KC_END, _______, XXXXXXX,
+  _______,  KC_CIRC, KC_P7,   KC_P8,   KC_P9,   KC_PERC,                  KC_PGUP, KC_HOME, KC_UP,   KC_END,  _______, XXXXXXX,
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
-  _______,  KC_MINS, KC_P4,  KC_P5,   KC_P6,  KC_SLSH,                   KC_PGDN, KC_LEFT,  KC_DOWN, KC_RGHT, _______, _______,
+  _______,  KC_MINS, KC_P4,   KC_P5,   KC_P6,   KC_SLSH,                  KC_PGDN, KC_LEFT, KC_DOWN, KC_RGHT, _______, _______,
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
-  _______,  KC_PLUS, KC_P1, KC_P2,    KC_P3,  KC_ASTR,_______, sPoNgEbOb,KC_DEL, KC_INS,  KC_PSCR,  KC_SCRL, _______, _______, // toggle sPoNgEbOb case
+  _______,  KC_PLUS, KC_P1,   KC_P2,   KC_P3,   KC_ASTR,_______,sPoNgEbOb,KC_DEL,  KC_INS,  KC_NO,   KC_SCRL, _______, _______,
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
               KC_P0, KC_PDOT, KC_EQL, _______, KC_INT5,          _______, KC_INT1, KC_INT2, KC_INT3, KC_INT4
   //            \--------+--------+--------+---------+-------|   |--------+---------+--------+---------+-------/

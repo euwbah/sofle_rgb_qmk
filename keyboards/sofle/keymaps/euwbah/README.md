@@ -13,7 +13,7 @@ Features:
 - Left rotary encoder:
   - volume control, mute on click
   - When alt/ctrl is held down, does alt+tab/alt+shift+tab/ctrl+tab/ctrl+shift+tab.
-  - Lower layer: brightness control.
+  - Lower layer: laptop brightness control, permanent NAV/Numpad layer (press Esc to exit).
   - Raise layer: external monitor brightness control (requires [HID Info Sender](https://github.com/euwbah/hid-info-sender))
   - Nav layer: external monitor contrast control (requires [HID Info Sender](https://github.com/euwbah/hid-info-sender))
 - Right rotary encoder:
@@ -26,17 +26,26 @@ Features:
 - Navigation layer, with arrow keys, home, end, Print Screen on the right, and num pad on the left.
 - Raise layer: numbers, symbols, function, and language keys
 - Lower layer:
-  - special function macros function keys (Alt+F4, Shift+F6, Alt+F12)
-  - Ctrl+Shift+Esc (task manager), Ctrl+Alt+Del, Print Screen
+  - Macros:
+    - Backspace = Alt+F4: close window
+    - A = Ctrl+Shift+Esc: task manager
+    - S = Ctrl+Alt+Del
+    - D = Print Screen
+    - Ctrl = Ctrl+Shift+P: VSCode/Pulsar/Atom open command palette
+    - Z = Ctrl+Alt+J: VSCode SyncTex scroll pdf view to cursor position.
+    - X = Alt+F12: Open terminal vscode
+    - C = Alt+J: IntelliJ select word/next occurrences of selection.
+    - V = Shift+F6: IntelliJ refactor rename identifiers
+    - B = Ctrl+Alt+V: IntelliJ "extract variable" keybinding
+    - Ctrl+Win+Left/Right: Switch desktop
   - volume & brightness keys
-  - Ctrl+Alt+V (IntelliJ "extract variable" keybinding)
   - Other non-macro function keys 1 to 24
-  - Switch desktop
   - one-handed QK_BOOT for quick bootloader access on one half
   - Mouse keys
-- Modified RGB controls will display on left OLED.
+- Left OLED displays adjusted settings (caps lock, num lock, RGB HSV, external monitor brightness, etc...)
 - WPM displayed on left OLED.
 - Hardware utilization stats displayed on right OLED (Requires setting up & running [HID Info Sender](https://github.com/euwbah/hid-info-sender))
+- Date & Time ([HID Info Sender](https://github.com/euwbah/hid-info-sender))
 
 Setup:
 
