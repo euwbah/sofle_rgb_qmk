@@ -38,6 +38,9 @@
 
 #define FORCE_NKRO
 
+#define NO_ACTION_MACRO
+#define NO_ACTION_FUNCTION
+
 // For syncing data across two halves of keyboard.
 #define SPLIT_TRANSPORT_MIRROR
 #define SPLIT_LAYER_STATE_ENABLE
@@ -48,7 +51,7 @@
 // There's an issue with OLED timeouts on split keyboards - the secondary OLED dies after the set timeout.
 // Disable the QMK's built-in OLED timeout feature, and impl a custom one.
 #define OLED_TIMEOUT 0
-#define CUSTOM_OLED_TIMEOUT 60000
+#define CUSTOM_OLED_TIMEOUT 300000
 #undef SPLIT_ACTIVITY_ENABLE
 
 #define WPM_SAMPLE_SECONDS 2
@@ -64,14 +67,21 @@
 #define FORCE_DATA_SYNC_TIME 1000 // User config: how often to force data sync in milliseconds.
 #define RPC_M2S_BUFFER_SIZE 32
 
-#define MOUSEKEY_DELAY 10
-#define MOUSEKEY_INTERVAL 10
-#define MOUSEKEY_MOVE_DELTA 2
-#define MOUSEKEY_MAX_SPEED 10
-#define MOUSEKEY_TIME_TO_MAX 30
-#define MOUSEKEY_WHEEL_DELAY 80
-#define MOUSEKEY_WHEEL_INTERVAL 20
-#define MOUSEKEY_WHEEL_MAX_SPEED 1
+// Implementing bespoke mousekey functions from report.h directly
+#define MOUSE_ENABLE // for has_mouse_report_changed() function in report.h
+#undef MOUSE_SHARED_EP // We're not using shared USB endpoint for mouse, changes contents of report_mouse_t struct.
+#define MOUSE_UPDATE_INTERVAL 5 // How often to update mouse position in number of matrix scan iterations
+#define MOUSE_SPEED_UPDATE_INTERVAL 10 // How often to update mouse speed in number of matrix scan iterations
+#define MOUSE_SPEED_MAX 25
+
+// #define MOUSEKEY_DELAY 10
+// #define MOUSEKEY_INTERVAL 10
+// #define MOUSEKEY_MOVE_DELTA 2
+// #define MOUSEKEY_MAX_SPEED 10
+// #define MOUSEKEY_TIME_TO_MAX 30
+// #define MOUSEKEY_WHEEL_DELAY 80
+// #define MOUSEKEY_WHEEL_INTERVAL 20
+// #define MOUSEKEY_WHEEL_MAX_SPEED 1
 
 #define ENCODER_DIRECTION_FLIP
 #ifdef ENCODER_RESOLUTION

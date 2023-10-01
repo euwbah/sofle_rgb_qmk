@@ -20,6 +20,8 @@
 // This include is required for using rpc transactions between master and slave
 #include "transactions.h"
 #include "raw_hid.h"
+#include "report.h"
+#include "./config.h"
 
 #include QMK_KEYBOARD_H
 
@@ -46,9 +48,11 @@ enum custom_keycodes {
     KC_ADJUST,
     KC_NAV,
     KC_D_MUTE,
-    sPoNgEbOb, // toggle sPoNgEbOb case
+    sPgBoB, // toggle SpOnGeBoB case
     OLED_B_UP, // Increase oled brightness
     OLED_B_DN, // Decrease oled brightness
+    MS_BTN1, MS_BTN2, MS_BTN3, MS_BTN4, MS_BTN5, // Custom implemented mouse buttons
+    MS_U, MS_D, MS_L, MS_R, // Custom implemented mouse movements
 };
 
 enum oled_display_mode_enum {
@@ -68,6 +72,17 @@ enum oled_display_mode_enum {
     OLED_DISPLAY_EXT_MONITOR_BRIGHTNESS,
     OLED_DISPLAY_EXT_MONITOR_CONTRAST,
 };
+
+// for storing mouse movement state.
+typedef union {
+    uint8_t _raw;
+    struct {
+        bool up : 1;
+        bool down : 1;
+        bool left : 1;
+        bool right : 1;
+    };
+} mousekeys_status_t;
 
 typedef union {
     uint32_t _raw;
@@ -92,7 +107,6 @@ typedef union {
 // Sent using USER_SYNC_DATA transaction ID.
 // Don't exceed 32 bytes.
 typedef struct _m_to_s_data {
-    // device utilization stats 7 bytes
     uint8_t cpu_usage;
     uint8_t cpu_temp;
     uint8_t ram_usage;
@@ -100,15 +114,21 @@ typedef struct _m_to_s_data {
     uint8_t gpu_mem_usage;
     uint8_t gpu_temp;
     uint8_t gpu1_usage;
-    // spongebob case 1 byte [8]
     bool sPoNgEbOb_case_active;
-    // datetime 4 bytes [12]
     datetime_t datetime;
-    // 4 bytes [16]
-    // Represents time since last keypress in milliseconds
     uint32_t last_keypress_timer;
     uint8_t oled_brightness;
 } m_to_s_data_t;
+
+#define CLSWIN A(KC_F4)
+#define TSKMGR C(S(KC_ESC))
+#define CTALDEL C(A(KC_DEL))
+#define VSCMDS C(S(KC_P))
+#define LTSYNC C(A(KC_J)) // latex viewer pdf scroll sync
+#define VSTERM A(KC_F12) // VSCode open terminal
+#define IJNXT A(KC_J) // IntelliJ add next occurrence to selection
+#define IJRENM S(KC_F6) // IntelliJ rename
+#define IJEXTR C(A(KC_V)) // IntelliJ extract variable
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   [_QWERTY] = LAYOUT(
@@ -127,7 +147,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
 [_COLEMAK] = LAYOUT(
   //,------------------------------------------------.                    ,---------------------------------------------------.
-  KC_TRNS,  KC_1,   KC_2,    KC_3,    KC_4,    KC_5,                      KC_6,    KC_7,   KC_8,    KC_9,    KC_0,    KC_TRNS,
+  KC_TRNS,  KC_TRNS,KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                   KC_TRNS, KC_TRNS,KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
   KC_TRNS,  KC_Q,   KC_W,    KC_F,    KC_P,    KC_G,                      KC_J,    KC_L,   KC_U,    KC_Y,    KC_SCLN, KC_TRNS,
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
@@ -141,7 +161,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
 [_COLEMAKDH] = LAYOUT(
   //,------------------------------------------------.                    ,---------------------------------------------------.
-  KC_TRNS,  KC_1,   KC_2,    KC_3,    KC_4,    KC_5,                      KC_6,    KC_7,   KC_8,    KC_9,    KC_0,    KC_TRNS,
+  KC_TRNS,  KC_TRNS,KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                   KC_TRNS, KC_TRNS,KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
   KC_TRNS,  KC_Q,   KC_W,    KC_F,    KC_P,    KC_B,                      KC_J,    KC_L,   KC_U,    KC_Y,    KC_SCLN, KC_TRNS,
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
@@ -159,11 +179,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
   KC_F13,   KC_F14, KC_F15,  KC_F16,   KC_F17,  KC_F18,                   KC_F19,  KC_F20,  KC_F21,  KC_F22,  KC_F23,  KC_F24,
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
-  A(KC_F4),C(S(KC_ESC)),C(A(KC_DEL)),KC_PSCR,KC_NO,KC_NO,                 KC_BRIU, KC_VOLU, KC_BTN1, KC_MS_U, KC_BTN2, KC_BTN4,
+  CLSWIN,   TSKMGR, CTALDEL, KC_PSCR,  KC_NO,   KC_NO,                    KC_BRIU, KC_VOLU, MS_BTN1, MS_U,    MS_BTN2, MS_BTN4,
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
-  C(S(KC_P)),C(A(KC_J)),A(KC_F12),A(KC_J),S(KC_F6),C(A(KC_V)),TO(_NAV),_______,KC_BRID,KC_VOLD, KC_MS_L, KC_MS_D, KC_MS_R, KC_BTN5,
+  VSCMDS,   LTSYNC, VSTERM,  IJNXT,    IJRENM,  IJEXTR,TO(_NAV), KC_TRNS, KC_BRID, KC_VOLD, MS_L,    MS_D,    MS_R,    MS_BTN5,
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
-            C(G(KC_LEFT)),C(G(KC_RGHT)),_______,_______,QK_BOOT, _______, KC_BTN8, _______, KC_BTN7, KC_BTN3
+            C(G(KC_LEFT)),C(G(KC_RGHT)),_______,_______,QK_BOOT, _______, _______, _______, _______, MS_BTN3
   //            \--------+--------+--------+---------+-------|   |--------+---------+--------+---------+-------/
 ),
 
@@ -173,7 +193,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //,------------------------------------------------.                    ,---------------------------------------------------.
   KC_GRV,  KC_F2,   KC_F3,   KC_F4,   KC_F5,   KC_F6,                     KC_F7,   KC_F8,   KC_F9,   KC_F10 , KC_F11 , KC_F12,
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
-  KC_TILD, KC_1,    KC_2,    KC_3,    KC_4,    KC_5,                      KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_QUES,
+  KC_TILD, KC_1,    KC_2,    KC_3,    KC_4,    KC_5,                      KC_6,    KC_7,    KC_8,    KC_9,    KC_0,    KC_TRNS,
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
   _______, KC_EXLM, KC_AT,   KC_HASH, KC_DLR,  KC_PERC,                   KC_CIRC, KC_LCBR, KC_RCBR, KC_LBRC, KC_RBRC, KC_BSLS,
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
@@ -207,18 +227,18 @@ KC_INT5: Muhenkan
   //,------------------------------------------------.                    ,---------------------------------------------------.
   TG(_NAV), KC_PIPE, KC_LPRN, KC_RPRN, KC_AMPR, KC_NUM,                   KC_BRK, KC_PSCR,  _______, _______, XXXXXXX, XXXXXXX,
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
-  _______,  KC_CIRC, KC_P7,   KC_P8,   KC_P9,   KC_PERC,                  KC_PGUP, KC_HOME, KC_UP,   KC_END,  _______, C(A(KC_BSPC)),
+  KC_EQL,   KC_CIRC, KC_P7,   KC_P8,   KC_P9,   KC_PERC,                  KC_PGUP, KC_HOME, KC_UP,   KC_END,  _______, C(A(KC_BSPC)),
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
-  _______,  KC_MINS, KC_P4,   KC_P5,   KC_P6,   KC_SLSH,                  KC_PGDN, KC_LEFT, KC_DOWN, KC_RGHT, _______, C(A(KC_RBRC)),
+  _______,  KC_MINS, KC_P4,   KC_P5,   KC_P6,   KC_SLSH,                  KC_PGDN, KC_LEFT, KC_DOWN, KC_RGHT, KC_APP,  C(A(KC_RBRC)),
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
-  _______,  KC_PLUS, KC_P1,   KC_P2,   KC_P3,   KC_ASTR,_______,sPoNgEbOb,KC_DEL,  KC_INS,  KC_NO,   KC_SCRL, _______, C(S(KC_BSLS)),
+  _______,  KC_PLUS, KC_P1,   KC_P2,   KC_P3,   KC_ASTR,TO(_LOWER),sPgBoB,KC_DEL, KC_INS, KC_NO,  KC_SCRL, _______, C(S(KC_BSLS)),
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
-            _______, KC_P0,   KC_PDOT, KC_EQL,  KC_INT5,         _______, KC_INT1, KC_INT2, KC_INT3, KC_INT4
+            _______, KC_P0,   KC_PDOT, _______, KC_INT5,         _______, KC_INT1, KC_INT2, KC_INT3, KC_INT4
   //            \--------+--------+--------+---------+-------|   |--------+---------+--------+---------+-------/
 ),
 };
 
-const char *get_u6_str(uint8_t curr_num, char curr_pad) {
+const char* get_u6_str(uint8_t curr_num, char curr_pad) {
     static char    buf[3]   = {0};
     static uint8_t last_num = 0xFF;
     static char    last_pad = '\0';
@@ -230,22 +250,13 @@ const char *get_u6_str(uint8_t curr_num, char curr_pad) {
     return get_numeric_str(buf, sizeof(buf), curr_num, curr_pad);
 }
 
-static uint8_t cpu_usage = 0;
-static uint8_t cpu_temp = 0;
-static uint8_t ram_usage = 0;
-static uint8_t gpu_usage = 0;
-static uint8_t gpu_mem_usage = 0;
-static uint8_t gpu_temp = 0;
-static uint8_t gpu1_usage = 0;
-
-static datetime_t datetime = {0};
+static m_to_s_data_t sync_data = {0};
 
 // For storing in EEPROM.
 static user_config_t user_config;
 
 static uint8_t mod_state;
 static bool is_backspace_down = false;
-static bool sPoNgEbOb_case_active = false;
 static bool sPoNgEbOb_state = false; // automatically toggles when alphabets and shift is pressed.
 static bool last_synced_sPoNgEbOb_active = true;
 
@@ -254,53 +265,83 @@ static bool last_synced_sPoNgEbOb_active = true;
 static uint8_t oled_display_mode = OLED_DISPLAY_HUE;
 
 static uint8_t info_display_timeout = 0; // in led update frames
-static uint32_t last_keypress_timer = 0;
 static uint32_t send_hid_user_data_timer = 0; // Wait for a bit before sending HID user data to host.
 static bool hid_user_data_sent = false;
 
+// for custom mouse keys impl
+
+static report_mouse_t custom_mouse_report = {0, 0, 0, 0, 0};
+static report_mouse_t old_mouse_report = {0, 0, 0, 0, 0};
+
+// stores number of matrix scan iterations since last mouse update
+// we don't use a timer to save on ROM and CPU.
+static uint8_t mouse_frames_counter = 0;
+
+// stores number of iterations since last mouse speed update
+static uint8_t mouse_speed_frames_counter = 0;
+
+static int8_t mouse_vel_x = 0;
+static int8_t mouse_vel_y = 0;
+// mousekeys bitmask
+static mousekeys_status_t mousekeys_status = {0};
+
+/**
+ * @brief Sends mouse report (only if data changed since last send)
+ *
+ */
+void send_mouse_report(void) {
+    bool should_send_report = has_mouse_report_changed(&custom_mouse_report, &old_mouse_report);
+
+    if (should_send_report) {
+        host_mouse_send(&custom_mouse_report);
+    }
+    // Buttons remain, but movements/scroll are reset.
+    // The address of custom_mouse_report + 1 is the first movement related struct member
+    // (assuming MOUSE_SHARED_EP not defined)
+    memset(((uint8_t*) &custom_mouse_report) + 1, 0, sizeof(custom_mouse_report) - 1);
+    memcpy(&old_mouse_report, &custom_mouse_report, sizeof(custom_mouse_report));
+}
+
+/**
+ * @brief Callback handler for slave side to receive sync data from master side.
+ *
+ * @param in_buflen length of input data
+ * @param in_data input data
+ * @param out_buflen length of output data
+ * @param out_data output data
+ */
 void user_sync_data_slave_handler(uint8_t in_buflen, const void* in_data, uint8_t out_buflen, void* out_data) {
-    const m_to_s_data_t* data = (const m_to_s_data_t*)in_data;
-    cpu_usage = data->cpu_usage;
-    cpu_temp = data->cpu_temp;
-    ram_usage = data->ram_usage;
-    gpu_usage = data->gpu_usage;
-    gpu_mem_usage = data->gpu_mem_usage;
-    gpu_temp = data->gpu_temp;
-    gpu1_usage = data->gpu1_usage;
-    sPoNgEbOb_case_active = data->sPoNgEbOb_case_active;
-    datetime = data->datetime;
-    last_keypress_timer = data->last_keypress_timer;
-    oled_set_brightness(data->oled_brightness);
+    sync_data = *(const m_to_s_data_t*)in_data;
+    oled_set_brightness(sync_data.oled_brightness);
 }
 
 static uint32_t last_synced_time = 0;
 // Set to true when sync failed to immediately retry on the next housekeeping_task iteration.
 static bool force_sync_retry = false;
 
-// Send data from master side to slave side.
-// returns `true` if sync successful, otherwise `false`.
+/**
+ * @brief Send sync data from master side to slave side.
+ * @return returns `true` if sync successful, otherwise `false`. If called on slave side, always returns `true`.
+ */
 bool perform_data_sync(void) {
     if (is_keyboard_master()) {
-        m_to_s_data_t sync_data = {
-            cpu_usage, cpu_temp, ram_usage, gpu_usage,
-            gpu_mem_usage, gpu_temp, gpu1_usage,
-            sPoNgEbOb_case_active,
-            datetime,
-            last_keypress_timer,
-            oled_get_brightness(),
-        };
         // no need for bidirectional communication, so use transaction_rpc_send instead of
         // transaction_rpc_exec
-        last_synced_sPoNgEbOb_active = sPoNgEbOb_case_active;
+        sync_data.oled_brightness = oled_get_brightness();
+        last_synced_sPoNgEbOb_active = sync_data.sPoNgEbOb_case_active;
         last_synced_time = timer_read32();
-        bool sync_success = transaction_rpc_send(USER_SYNC_DATA, sizeof(sync_data), &sync_data);
+        bool sync_success = transaction_rpc_send(
+            USER_SYNC_DATA,
+            sizeof(sync_data),
+            &sync_data
+        );
         force_sync_retry = !sync_success;
         return sync_success;
     }
-    return true; // if slave keyboard calls this function, no need to do anything/retry.
+    return true; // if slave keyboard calls this function, no need to do anything.
 }
 
-void  send_hid_user_data(void) {
+void send_hid_user_data(void) {
     // Send 0x01, <external monitor brightness>, <contrast>
     uint8_t bytes[32];
     memset(bytes, 0, sizeof(bytes));
@@ -322,6 +363,8 @@ oled_rotation_t oled_init_user(oled_rotation_t rotation) {
     return OLED_ROTATION_270;
     // return rotation;
 }
+
+// static char string_buffer[100] = "";
 
 static void print_status_narrow(void) {
     // Print current mode
@@ -421,7 +464,7 @@ static void print_status_narrow(void) {
                 break;
             case OLED_DISPLAY_SPONGEBOB:
                 oled_write_P(PSTR("sPbOb"), false);
-                if (sPoNgEbOb_case_active) {
+                if (sync_data.sPoNgEbOb_case_active) {
                     oled_write_ln_P(PSTR("ON"), true);
                 } else {
                     oled_write_ln_P(PSTR("OFF"), false);
@@ -451,12 +494,12 @@ static void print_status_narrow(void) {
     oled_set_cursor(0, 12);
     oled_write(get_u8_str(get_current_wpm(), ' '), false);
 
-    if (datetime.month != 0) {
+    if (sync_data.datetime.month != 0) {
         oled_set_cursor(0, 14);
-        oled_write(get_u6_str(datetime.month, ' '), false);
+        oled_write(get_u6_str(sync_data.datetime.month, ' '), false);
         oled_write_P(PSTR("/"), false);
-        oled_write(get_u6_str(datetime.date, '0'), false);
-        switch (datetime.day_of_week) {
+        oled_write(get_u6_str(sync_data.datetime.date, '0'), false);
+        switch (sync_data.datetime.day_of_week) {
         case 0:
             oled_write_P(PSTR("Mon"), false);
             break;
@@ -530,50 +573,50 @@ static void oled_render_anim(void) {
         oled_set_cursor(0, cursor_y++);
         oled_write_P(PSTR("CPU"), false);
         oled_set_cursor(0, cursor_y++);
-        draw_utilization_bar(cpu_usage);
+        draw_utilization_bar(sync_data.cpu_usage);
 
         oled_set_cursor(0, cursor_y++);
         oled_write_P(PSTR("CTEMP"), false);
         oled_set_cursor(0, cursor_y++);
-        draw_utilization_bar(cpu_temp);
+        draw_utilization_bar(sync_data.cpu_temp);
 
         oled_set_cursor(0, cursor_y++);
         oled_write_P(PSTR("RAM"), false);
         oled_set_cursor(0, cursor_y++);
-        draw_utilization_bar(ram_usage);
+        draw_utilization_bar(sync_data.ram_usage);
 
         oled_set_cursor(0, cursor_y++);
         oled_write_P(PSTR("GPU"), false);
         oled_set_cursor(0, cursor_y++);
-        draw_utilization_bar(gpu_usage);
+        draw_utilization_bar(sync_data.gpu_usage);
 
         oled_set_cursor(0, cursor_y++);
         oled_write_P(PSTR("VRAM"), false);
         oled_set_cursor(0, cursor_y++);
-        draw_utilization_bar(gpu_mem_usage);
+        draw_utilization_bar(sync_data.gpu_mem_usage);
 
         oled_set_cursor(0, cursor_y++);
         oled_write_P(PSTR("GTEMP"), false);
         oled_set_cursor(0, cursor_y++);
-        draw_utilization_bar(gpu_temp);
+        draw_utilization_bar(sync_data.gpu_temp);
 
         oled_set_cursor(0, cursor_y++);
         oled_write_P(PSTR("GPU1"), false);
         oled_set_cursor(0, cursor_y++);
-        draw_utilization_bar(gpu1_usage);
+        draw_utilization_bar(sync_data.gpu1_usage);
 
-        if (datetime.month != 0) {
+        if (sync_data.datetime.month != 0) {
             oled_set_cursor(0, cursor_y++);
-            oled_write(get_u6_str(datetime.hour, '0'), false);
+            oled_write(get_u6_str(sync_data.datetime.hour, '0'), false);
             oled_write_P(PSTR(":"), false);
-            oled_write(get_u6_str(datetime.minute, '0'), false);
-            oled_write(get_u6_str(datetime.second, '0'), false);
+            oled_write(get_u6_str(sync_data.datetime.minute, '0'), false);
+            oled_write(get_u6_str(sync_data.datetime.second, '0'), false);
         }
     }
 }
 
 bool oled_task_user(void) {
-    if (sync_timer_elapsed32(last_keypress_timer) > CUSTOM_OLED_TIMEOUT) {
+    if (sync_timer_elapsed32(sync_data.last_keypress_timer) > CUSTOM_OLED_TIMEOUT) {
         if (is_oled_on()) {
             oled_off();
         }
@@ -591,7 +634,7 @@ bool oled_task_user(void) {
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     if (record->event.pressed) {
-        last_keypress_timer = sync_timer_read32();
+        sync_data.last_keypress_timer = sync_timer_read32();
     }
     switch (keycode) {
         case KC_QWERTY:
@@ -664,7 +707,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     }
 
     if (record->event.pressed) {
-        if (sPoNgEbOb_case_active) {
+        if (sync_data.sPoNgEbOb_case_active) {
             if (keycode >= KC_A && keycode <= KC_Z) {
                 sPoNgEbOb_state = !sPoNgEbOb_state;
                 if (sPoNgEbOb_state) {
@@ -717,43 +760,114 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             oled_display_mode = OLED_DISPLAY_KANA;
             info_display_timeout = OLED_INFO_DISPLAY_DURATION;
             return true;
-        case sPoNgEbOb:
-            sPoNgEbOb_case_active = !sPoNgEbOb_case_active;
+        case sPgBoB:
+            sync_data.sPoNgEbOb_case_active = !sync_data.sPoNgEbOb_case_active;
             oled_display_mode = OLED_DISPLAY_SPONGEBOB;
             info_display_timeout = OLED_INFO_DISPLAY_DURATION;
-            return false;
+            break;
         case OLED_B_UP: ;
-            uint8_t curr_oled_brightness = oled_get_brightness();
-            if (curr_oled_brightness >= 240) {
+            if (sync_data.oled_brightness >= 240) {
                 oled_set_brightness(255);
             } else {
-                oled_set_brightness(curr_oled_brightness + 16);
+                oled_set_brightness(sync_data.oled_brightness + 16);
             }
             oled_display_mode = OLED_DISPLAY_OLED_BRIGHTNESS;
             info_display_timeout = OLED_INFO_DISPLAY_DURATION;
             perform_data_sync();
-            return false;
+            break;
         case OLED_B_DN: ;
-            curr_oled_brightness = oled_get_brightness();
-            if (curr_oled_brightness <= 16) {
+            if (sync_data.oled_brightness <= 16) {
                 oled_set_brightness(0);
             } else {
-                oled_set_brightness(curr_oled_brightness - 16);
+                oled_set_brightness(sync_data.oled_brightness - 16);
             }
             oled_display_mode = OLED_DISPLAY_OLED_BRIGHTNESS;
             info_display_timeout = OLED_INFO_DISPLAY_DURATION;
             perform_data_sync();
-            return false;
+            break;
+        case MS_BTN1:
+            custom_mouse_report.buttons |= MOUSE_BTN1;
+            break;
+        case MS_BTN2:
+            custom_mouse_report.buttons |= MOUSE_BTN2;
+            break;
+        case MS_BTN3:
+            custom_mouse_report.buttons |= MOUSE_BTN3;
+            break;
+        case MS_BTN4:
+            custom_mouse_report.buttons |= MOUSE_BTN4;
+            break;
+        case MS_BTN5:
+            custom_mouse_report.buttons |= MOUSE_BTN5;
+            break;
+        case MS_U:
+            mousekeys_status.up = true;
+            mousekeys_status.down = false;
+            if (mouse_vel_y > 0)
+                mouse_vel_y = -mouse_vel_y;
+            break;
+        case MS_D:
+            mousekeys_status.down = true;
+            mousekeys_status.up = false;
+            if (mouse_vel_y < 0)
+                mouse_vel_y = -mouse_vel_y;
+            break;
+        case MS_L:
+            mousekeys_status.left = true;
+            mousekeys_status.right = false;
+            if (mouse_vel_x > 0)
+                mouse_vel_x = -mouse_vel_x;
+            break;
+        case MS_R:
+            mousekeys_status.right = true;
+            mousekeys_status.left = false;
+            if (mouse_vel_x < 0)
+                mouse_vel_x = -mouse_vel_x;
+            break;
+        }
+    } else {
+        // key up event
+        switch (keycode) {
+        case MS_BTN1:
+            custom_mouse_report.buttons &= ~MOUSE_BTN1;
+            break;
+        case MS_BTN2:
+            custom_mouse_report.buttons &= ~MOUSE_BTN2;
+            break;
+        case MS_BTN3:
+            custom_mouse_report.buttons &= ~MOUSE_BTN3;
+            break;
+        case MS_BTN4:
+            custom_mouse_report.buttons &= ~MOUSE_BTN4;
+            break;
+        case MS_BTN5:
+            custom_mouse_report.buttons &= ~MOUSE_BTN5;
+            break;
+        case MS_U:
+            mousekeys_status.up = false;
+            break;
+        case MS_D:
+            mousekeys_status.down = false;
+            break;
+        case MS_L:
+            mousekeys_status.left = false;
+            break;
+        case MS_R:
+            mousekeys_status.right = false;
+            break;
         }
     }
+    send_mouse_report();
+
     return true;
 }
 
+// This runs at the end of update loop.
 void housekeeping_task_user(void) {
     mod_state = get_mods();
 
     if (timer_elapsed32(last_synced_time) > FORCE_DATA_SYNC_TIME
-        || sPoNgEbOb_case_active != last_synced_sPoNgEbOb_active
+        || sync_data.sPoNgEbOb_case_active != last_synced_sPoNgEbOb_active
         || force_sync_retry) {
         perform_data_sync();
     }
@@ -761,6 +875,45 @@ void housekeeping_task_user(void) {
     if (timer_elapsed32(send_hid_user_data_timer) > HID_SEND_DATA_DELAY && !hid_user_data_sent) {
         send_hid_user_data();
         hid_user_data_sent = true;
+    }
+
+    // update mouse tings
+    if (mouse_speed_frames_counter++ > MOUSE_SPEED_UPDATE_INTERVAL) {
+        mouse_speed_frames_counter = 0;
+
+        if (mousekeys_status.right) {
+            if (mouse_vel_x < MOUSE_SPEED_MAX)
+                mouse_vel_x += 2;
+        } else if (mousekeys_status.left) {
+            if (mouse_vel_x > -MOUSE_SPEED_MAX)
+                mouse_vel_x -= 2;
+        } else {
+            if (mouse_vel_x < 0) {
+                mouse_vel_x += -mouse_vel_x / 4 + 1;
+            } else if (mouse_vel_x > 0) {
+                mouse_vel_x += -mouse_vel_x / 4 - 1;
+            }
+        }
+        if (mousekeys_status.up) {
+            if (mouse_vel_y > -MOUSE_SPEED_MAX)
+                mouse_vel_y -= 2;
+        } else if (mousekeys_status.down) {
+            if (mouse_vel_y < MOUSE_SPEED_MAX)
+                mouse_vel_y += 2;
+        } else {
+            if (mouse_vel_y < 0) {
+                mouse_vel_y += -mouse_vel_y / 4 + 1;
+            } else if (mouse_vel_y > 0) {
+                mouse_vel_y += -mouse_vel_y / 4 - 1;
+            }
+        }
+    }
+
+    if (mouse_frames_counter++ > MOUSE_UPDATE_INTERVAL) {
+        mouse_frames_counter = 0;
+        custom_mouse_report.x = mouse_vel_x;
+        custom_mouse_report.y = mouse_vel_y;
+        send_mouse_report();
     }
 }
 
@@ -785,7 +938,6 @@ bool encoder_update_user(uint8_t index, bool clockwise) {
             } else {
                 tap_code16(S(KC_TAB));
             }
-            return false;
         } else {
             switch (get_highest_layer(layer_state)) {
             case _LOWER:
@@ -794,7 +946,7 @@ bool encoder_update_user(uint8_t index, bool clockwise) {
                 } else {
                     tap_code(KC_BRID);
                 }
-                return false;
+                break;
             case _RAISE:
                 if (clockwise) {
                     user_config.ext_monitor_brightness += 5;
@@ -814,7 +966,7 @@ bool encoder_update_user(uint8_t index, bool clockwise) {
                 eeconfig_update_user(user_config._raw);
                 hid_user_data_sent = false;
                 send_hid_user_data_timer = timer_read32();
-                return false;
+                break;
             case _NAV:
                 if (clockwise) {
                     user_config.ext_monitor_contrast += 5;
@@ -832,7 +984,7 @@ bool encoder_update_user(uint8_t index, bool clockwise) {
                 eeconfig_update_user(user_config._raw);
                 hid_user_data_sent = false;
                 send_hid_user_data_timer = timer_read32();
-                return false;
+                break;
             default:
                 if (clockwise) {
                     tap_code(KC_VOLU);
@@ -850,58 +1002,49 @@ bool encoder_update_user(uint8_t index, bool clockwise) {
         // }
 
         switch (get_highest_layer(layer_state)) {
-        // case _COLEMAK:
-        // case _QWERTY:
-        // case _COLEMAKDH:
-        //     if (clockwise) {
-        //         tap_code(KC_PGDN);
-        //     } else {
-        //         tap_code(KC_PGUP);
-        //     }
-        //     return false;
+        case _ADJUST:
+            custom_mouse_report.h = clockwise ? 1 : -1;
+            break;
         case _RAISE:
-            if (clockwise) {
-                tap_code(KC_WH_D);
-            } else {
-                tap_code(KC_WH_U);
-            }
-            return false;
+            custom_mouse_report.v = clockwise ? -1 : 1;
+            break;
         case _LOWER:
             if (clockwise) {
                 tap_code(KC_DOWN);
             } else {
                 tap_code(KC_UP);
             }
-            return false;
+            break;
         case _NAV:
             if (clockwise) {
                 tap_code16(C(S(KC_RGHT)));
             } else {
                 tap_code16(C(S(KC_LEFT)));
             }
-            return false;
+            break;
         default:
                 if (clockwise) {
                     tap_code(KC_RGHT);
                 } else {
                     tap_code(KC_LEFT);
                 }
-            return false;
+            break;
 		}
+        send_mouse_report();
     }
-    return true;
+    return false;
 }
 
 bool rgb_matrix_indicators_user(void) {
     if (host_keyboard_led_state().caps_lock) {
         uint8_t rgb_val = rgb_matrix_get_val();
-        rgb_matrix_set_color(0, 0, rgb_val / 3, rgb_val / 3);
-        rgb_matrix_set_color(36, 0, rgb_val / 3, rgb_val / 3);
+        rgb_matrix_set_color(0, 0, rgb_val / 4, rgb_val / 4);
+        rgb_matrix_set_color(36, 0, rgb_val / 4, rgb_val / 4);
         rgb_matrix_set_color(9, 0, rgb_val, rgb_val);
-    } else if (sPoNgEbOb_case_active) {
+    } else if (sync_data.sPoNgEbOb_case_active) {
         uint8_t rgb_val = rgb_matrix_get_val();
-        rgb_matrix_set_color(36, rgb_val * 3/5, rgb_val / 4, 0);
-        rgb_matrix_set_color(0, rgb_val * 3/5, rgb_val / 4, 0);
+        rgb_matrix_set_color(36, rgb_val / 2, rgb_val / 8, 0);
+        rgb_matrix_set_color(0, rgb_val / 2, rgb_val / 8, 0);
     } else {
         rgb_matrix_set_color(36, 0, 0, 0);
         rgb_matrix_set_color(0, 0, 0, 0);
@@ -915,6 +1058,12 @@ bool rgb_matrix_indicators_user(void) {
         } else {
             rgb_matrix_set_color(32, rgb_val / 2, rgb_val / 8, 0);
         }
+        // display scroll_lock state
+        if (host_keyboard_led_state().scroll_lock) {
+            rgb_matrix_set_color(36+18, 0, rgb_val / 2, rgb_val / 4);
+        } else {
+            rgb_matrix_set_color(36+18, rgb_val / 2, rgb_val / 8, 0);
+        }
     }
     return true;
 }
@@ -922,20 +1071,20 @@ bool rgb_matrix_indicators_user(void) {
 void raw_hid_receive(uint8_t *data, uint8_t length) {
     if(data[0] == 1) {
         // First data byte 1 means we are receiving host utilization data.
-        cpu_usage = data[1];
-        cpu_temp = data[2];
-        ram_usage = data[3];
-        gpu_usage = data[4];
-        gpu_mem_usage = data[5];
-        gpu_temp = data[6];
-        gpu1_usage = data[7];
+        sync_data.cpu_usage = data[1];
+        sync_data.cpu_temp = data[2];
+        sync_data.ram_usage = data[3];
+        sync_data.gpu_usage = data[4];
+        sync_data.gpu_mem_usage = data[5];
+        sync_data.gpu_temp = data[6];
+        sync_data.gpu1_usage = data[7];
 
-        datetime.month = data[10];
-        datetime.date = data[11];
-        datetime.day_of_week = data[12];
-        datetime.hour = data[13];
-        datetime.minute = data[14];
-        datetime.second = data[15];
+        sync_data.datetime.month = data[10];
+        sync_data.datetime.date = data[11];
+        sync_data.datetime.day_of_week = data[12];
+        sync_data.datetime.hour = data[13];
+        sync_data.datetime.minute = data[14];
+        sync_data.datetime.second = data[15];
 
         perform_data_sync();
     }

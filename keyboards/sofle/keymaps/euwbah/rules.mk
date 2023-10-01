@@ -1,4 +1,7 @@
-MOUSEKEY_ENABLE = yes
+# implement mousekeys from scratch using report.h
+# to save on firmware size.
+MOUSEKEY_ENABLE = no
+POINTING_DEVICE_ENABLE = no
 EXTRAKEY_ENABLE = yes
 NKRO_ENABLE = yes
 CONSOLE_ENABLE = no
