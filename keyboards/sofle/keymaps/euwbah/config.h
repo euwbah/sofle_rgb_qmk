@@ -41,6 +41,10 @@
 #define NO_ACTION_MACRO
 #define NO_ACTION_FUNCTION
 
+// Denotes the maximum duration between taps/releases of the double tap action of the
+// NAV key measured in (left) OLED frames. 1 frame is approximately 100ms ish?
+#define DBL_TAP_DUR_FRAMES 3
+
 // For syncing data across two halves of keyboard.
 #define SPLIT_TRANSPORT_MIRROR
 #define SPLIT_LAYER_STATE_ENABLE
@@ -70,7 +74,7 @@
 // Implementing bespoke mousekey functions from report.h directly
 #define MOUSE_ENABLE // for has_mouse_report_changed() function in report.h
 #undef MOUSE_SHARED_EP // We're not using shared USB endpoint for mouse, changes contents of report_mouse_t struct.
-#define MOUSE_UPDATE_INTERVAL 5 // How often to update mouse position in number of matrix scan iterations
+#define MOUSE_UPDATE_INTERVAL 3 // How often to update mouse position in number of matrix scan iterations
 #define MOUSE_SPEED_UPDATE_INTERVAL 10 // How often to update mouse speed in number of matrix scan iterations
 #define MOUSE_SPEED_MAX 25
 
