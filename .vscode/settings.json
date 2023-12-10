@@ -31,5 +31,5 @@
     "clangd.arguments": [
         "--header-insertion=never"
     ],
-    "cmake.sourceDirectory": "C:/Users/dacoo/Documents/Keyboard Things/sofle_qmk",
+    "cmake.sourceDirectory": "D:/OneDrive/Thumb Drive/Documents/Keyboard Things/sofle_qmk",
 }
