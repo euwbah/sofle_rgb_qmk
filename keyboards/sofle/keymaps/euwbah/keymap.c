@@ -103,8 +103,9 @@ typedef struct _m_to_s_data {
 enum sofle_layers {
     _DEFAULTS = 0,
     _QWERTY = 0,
-    _COLEMAK,
+    // _COLEMAK,
     _COLEMAKDH,
+    _GENSHIN,
     _LOWER,
     _RAISE,
     _ADJUST,
@@ -114,7 +115,7 @@ enum sofle_layers {
 
 enum custom_keycodes {
     KC_QWERTY = SAFE_RANGE,
-    KC_COLEMAK,
+    KC_GENSHIN,
     KC_COLEMAKDH,
     KC_LOWER,
     KC_RAISE,
@@ -190,19 +191,19 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //            \--------+--------+--------+---------+-------|   |--------+---------+--------+---------+-------/
 ),
 
-[_COLEMAK] = LAYOUT(
-  //,------------------------------------------------.                    ,---------------------------------------------------.
-  KC_TRNS,  KC_TRNS,KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                   KC_TRNS, KC_TRNS,KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
-  //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
-  KC_TRNS,  KC_Q,   KC_W,    KC_F,    KC_P,    KC_G,                      KC_J,    KC_L,   KC_U,    KC_Y,    KC_SCLN, KC_TRNS,
-  //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
-  KC_TRNS,  KC_A,   KC_R,    KC_S,    KC_T,    KC_D,                      KC_H,    KC_N,   KC_E,    KC_I,    KC_O,    KC_TRNS,
-  //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
-  KC_TRNS,  KC_Z,   KC_X,    KC_C,    KC_V,    KC_B,  KC_TRNS,    KC_TRNS,KC_K,    KC_M,   KC_COMM, KC_DOT,  KC_SLSH, KC_TRNS,
-  //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
-                 KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS,    KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS
-  //            \--------+--------+--------+---------+-------|   |--------+---------+--------+---------+-------/
-),
+// [_COLEMAK] = LAYOUT(
+//   //,------------------------------------------------.                    ,---------------------------------------------------.
+//   KC_TRNS,  KC_TRNS,KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                   KC_TRNS, KC_TRNS,KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,
+//   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
+//   KC_TRNS,  KC_Q,   KC_W,    KC_F,    KC_P,    KC_G,                      KC_J,    KC_L,   KC_U,    KC_Y,    KC_SCLN, KC_TRNS,
+//   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
+//   KC_TRNS,  KC_A,   KC_R,    KC_S,    KC_T,    KC_D,                      KC_H,    KC_N,   KC_E,    KC_I,    KC_O,    KC_TRNS,
+//   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
+//   KC_TRNS,  KC_Z,   KC_X,    KC_C,    KC_V,    KC_B,  KC_TRNS,    KC_TRNS,KC_K,    KC_M,   KC_COMM, KC_DOT,  KC_SLSH, KC_TRNS,
+//   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
+//                  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS,    KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS
+//   //            \--------+--------+--------+---------+-------|   |--------+---------+--------+---------+-------/
+// ),
 
 [_COLEMAKDH] = LAYOUT(
   //,------------------------------------------------.                    ,---------------------------------------------------.
@@ -215,6 +216,20 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   KC_TRNS,  KC_Z,   KC_X,    KC_C,    KC_D,    KC_V,  KC_TRNS,    KC_TRNS,KC_K,    KC_H,   KC_COMM, KC_DOT,  KC_SLSH, KC_TRNS,
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
                  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS,    KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS
+  //            \--------+--------+--------+---------+-------|   |--------+---------+--------+---------+-------/
+),
+
+[_GENSHIN] = LAYOUT(
+  //,------------------------------------------------.                    ,---------------------------------------------------.
+  KC_ESC,   KC_5,   KC_1,    KC_2,    KC_3,    KC_4,                      NR6,     NR7,    NR8,     NR9,     NR10,    NR11,
+  //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
+  KC_TAB,   KC_T,   KC_Q,    KC_W,    KC_E,    KC_R,                      KC_Y,    KC_U,   KC_I,    KC_O,    KC_P,    KC_UNDS,
+  //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
+  KC_M,     KC_BSPC,KC_A,    KC_S,    KC_D,    KC_F,                      KC_H,    KC_J,   KC_K,    KC_L,    KC_SCLN, KC_QUOT,
+  //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
+  KC_LALT,  KC_Z,   KC_B,    KC_X,    KC_C,    KC_V,  KC_MUTE,    MODMEH, KC_N,    KC_M,   KC_COMM, KC_DOT,  KC_SLSH, KC_ENT,
+  //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
+                 KC_LCTL, KC_LGUI, KC_LOWER, KC_LSFT, KC_SPC,     KC_NAV, KC_SPC, KC_RAISE,KC_U,    KC_J
   //            \--------+--------+--------+---------+-------|   |--------+---------+--------+---------+-------/
 ),
 
@@ -254,7 +269,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
   QK_BOOT, XXXXXXX, XXXXXXX, XXXXXXX, XXXXXXX, KC_QWERTY,                 XXXXXXX, KC_MPRV, KC_MPLY, KC_MNXT, XXXXXXX, XXXXXXX,
   //|------+-------+--------+--------+--------+------|                   |--------+-------+--------+--------+--------+---------|
-  RGB_TOG, RGB_HUI, RGB_SAI, RGB_VAI, RGB_SPI, KC_COLEMAK,                XXXXXXX,OLED_B_DN,OLED_B_UP,XXXXXXX,XXXXXXX, XXXXXXX,
+  RGB_TOG, RGB_HUI, RGB_SAI, RGB_VAI, RGB_SPI, KC_GENSHIN,                XXXXXXX,OLED_B_DN,OLED_B_UP,XXXXXXX,XXXXXXX, XXXXXXX,
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
   RGB_MOD, RGB_HUD, RGB_SAD, RGB_VAD,RGB_SPD,KC_COLEMAKDH,XXXXXXX,XXXXXXX,XXXXXXX, EXMON1,  EXMON2,  EXMON3,  XXXXXXX, XXXXXXX,
   //|------+-------+--------+--------+--------+------|  ===  |   |  ===  |--------+-------+--------+--------+--------+---------|
@@ -299,14 +314,14 @@ KC_INT5: Muhenkan
 ),
 };
 
-static const char** numrow_layer_names = (const char*[]){"Num\n\n", "Brk\n\n", "GDocs\n", "Gensh\n", "FN\n\n"};
+static const char** numrow_layer_names = (const char*[]){"Num\n\n", "Brk\n\n", "GDocs\n", /*"Gensh\n",*/ "FN\n\n"};
 static uint8_t current_numrow_layer = 0;
-#define NUMROW_LAYER_COUNT 5
+#define NUMROW_LAYER_COUNT 4
 const uint16_t PROGMEM numrow_keymaps[][12] = {
     [NR_NUMROW] =   {  KC_ESC,   KC_1,     KC_2,     KC_3,     KC_4,     KC_5,     KC_6,     KC_7,     KC_8,     KC_9,     KC_0,     KC_GRV  },
     [NR_BRACKETS] = {  KC_ESC,   KC_LPRN,  KC_LBRC,  KC_LCBR,  KC_LT,    DREFACC,  SCOPE,    KC_GT,    KC_RCBR,  KC_RBRC,  KC_RPRN,  KC_GRV  },
     [NR_GDOCS] =    {  KC_ESC,   HEAD1,    HEAD2,    HEAD3,    HEAD4,    GDSTRK,   GDCMT,    DECFNT,   INCFNT,   WRDCNT,   NORMTXT,  GDCMD   },
-    [NR_GENSHIN] =  {  KC_1,     KC_2,     KC_3,     KC_4,     KC_5,     KC_ESC,   KC_6,     KC_7,     KC_8,     KC_9,     KC_0,     KC_GRV  },
+    // [NR_GENSHIN] =  {  KC_1,     KC_2,     KC_3,     KC_4,     KC_5,     KC_ESC,   KC_6,     KC_7,     KC_8,     KC_9,     KC_0,     KC_GRV  },
     [NR_FN] =       {  KC_ESC,   KC_F2,    KC_F3,    KC_F4,    KC_F5,    KC_F6,    KC_F7,    KC_F8,    KC_F9,    KC_F10,   KC_F11,   KC_F12  },
 };
 
@@ -475,8 +490,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case KC_QWERTY:
             set_single_persistent_default_layer(_QWERTY);
             break;
-        case KC_COLEMAK:
-            set_single_persistent_default_layer(_COLEMAK);
+        case KC_GENSHIN:
+            set_single_persistent_default_layer(_GENSHIN);
             break;
         case KC_COLEMAKDH:
             set_single_persistent_default_layer(_COLEMAKDH);
@@ -968,8 +983,8 @@ static void render_left_oled(void) {
         case _QWERTY:
             cat_buffer("Qwrt\n\n");
             break;
-        case _COLEMAK:
-            cat_buffer("Clmk\n\n");
+        case _GENSHIN:
+            cat_buffer("Gensh\n");
             break;
         case _COLEMAKDH:
             cat_buffer("CmkDH\n");
