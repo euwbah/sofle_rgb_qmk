@@ -70,7 +70,7 @@ typedef union {
         uint8_t minute : 6;
         uint8_t second : 6;
     };
-} datetime_t;
+} datetime_t; // 4 bytes
 
 typedef union {
     uint16_t _raw;
@@ -81,21 +81,23 @@ typedef union {
 } user_config_t;
 
 // Sent using USER_SYNC_DATA transaction ID.
-// Don't exceed 32 bytes.
+// Don't exceed RPC_M2S_BUFFER_SIZE bytes (see config.h)
 typedef struct _m_to_s_data {
     // DO NOT CHANGE THE ORDER/ADD THINGS BEFORE THE FIRST 7 DEVICE UTIL STATS
     // There's memory hacks!!! Don't break it.
-    uint8_t cpu_usage;
-    uint8_t cpu_temp;
-    uint8_t ram_usage;
-    uint8_t gpu_usage;
-    uint8_t gpu_mem_usage;
-    uint8_t gpu_temp;
-    uint8_t gpu1_usage;
-    bool sPoNgEbOb_case_active;
-    datetime_t datetime;
-    uint32_t last_keypress_timer;
-    uint8_t oled_brightness;
+    uint8_t cpu_usage;                  // 1 byte
+    uint8_t cpu_temp;                   // 2
+    uint8_t ram_usage;                  // 3
+    uint8_t gpu_usage;                  // 4
+    uint8_t gpu_mem_usage;              // 5
+    uint8_t gpu_temp;                   // 6
+    uint8_t gpu1_usage;                 // 7
+
+    // You can add other stuff here.
+    bool sPoNgEbOb_case_active;         // 8
+    datetime_t datetime;                // 12
+    uint32_t last_keypress_timer;       // 16
+    uint8_t oled_brightness;            // 17
 } m_to_s_data_t;
 
 // IMPORTANT: if you change the order of the layers here, you will need to modify
@@ -344,7 +346,18 @@ static user_config_t user_config;
 
 static uint8_t mod_state;
 static uint8_t highest_layer_state;
-static bool is_backspace_down = false;
+
+// Bitmask for special key held down state
+typedef union {
+    uint8_t _raw;
+    struct {
+        bool backspace : 1;
+        bool f : 1;
+        uint8_t f_delay : 3; // keep track of cycles to wait before spamming f
+    };
+} key_held_state_t;
+key_held_state_t key_held_state = {0};
+
 static nav_state_enum nav_state = NAV_STATE_MO;
 
 // NAV Double Tap state flow:
@@ -372,7 +385,7 @@ static bool last_synced_sPoNgEbOb_active = true;
 static oled_display_mode_enum oled_display_mode = OLED_DISPLAY_HUE;
 
 static uint8_t info_display_timeout = 0; // in led update frames
-static uint32_t send_hid_user_data_timer = 0; // Wait for a bit before sending HID user data to host.
+static uint16_t send_hid_user_data_timer16 = 0; // Wait for a bit before sending HID user data to host.
 static bool hid_user_data_sent = false;
 
 // for custom mouse keys impl
@@ -407,7 +420,15 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             info_display_timeout = OLED_INFO_DISPLAY_DURATION;
             return false;
         }
-        is_backspace_down = record->event.pressed;
+        key_held_state.backspace = record->event.pressed;
+    }
+    if (keycode == KC_F) {
+        key_held_state.f = record->event.pressed;
+        if (get_highest_layer(default_layer_state) == _GENSHIN) {
+            // tap_code(KC_SPC); // debug
+            key_held_state.f_delay = 0;
+            // return false; // let the key through
+        }
     }
 
     if (record->event.pressed) {
@@ -517,7 +538,7 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             info_display_timeout = OLED_INFO_DISPLAY_DURATION;
             break;
         case KC_LCTL:
-            if (is_backspace_down) {
+            if (key_held_state.backspace) {
                 register_code(KC_LCTL);
                 tap_code(KC_BSPC);
                 unregister_code(KC_LCTL);
@@ -785,6 +806,9 @@ bool encoder_update_user(uint8_t index, bool clockwise) {
         //     return false;
         // }
         int8_t scroll_direction_flag = clockwise * 2 - 1;
+        // drastic attempt to reduce code size, doing this only saves 2 bytes
+        uint16_t left_or_right = clockwise ? KC_RGHT : KC_LEFT;
+        uint8_t up_or_down = clockwise ? KC_DOWN : KC_UP;
 
         switch (highest_layer_state) {
         case _ADJUST:
@@ -794,20 +818,20 @@ bool encoder_update_user(uint8_t index, bool clockwise) {
             custom_mouse_report.v = -scroll_direction_flag;
             break;
         case _LOWER:
-            tap_code(clockwise ? KC_DOWN : KC_UP);
+            tap_code(up_or_down);
             break;
         case _NAV:
             if (nav_state == NAV_STATE_HOLD) {
-                tap_code(clockwise ? KC_DOWN : KC_UP);
+                tap_code(up_or_down);
             } else {
-                tap_code16(clockwise ? C(S(KC_RGHT)) : C(S(KC_LEFT)));
+                tap_code16(C(S(left_or_right)));
             }
             break;
-        case _NAVSWAP:
-            tap_code(clockwise ? KC_RGHT : KC_LEFT);
-            break;
+        // case _NAVSWAP: // same as default
+        //     tap_code(clockwise ? KC_RGHT : KC_LEFT);
+        //     break;
         default:
-            tap_code(clockwise ? KC_RGHT : KC_LEFT);
+            tap_code(left_or_right);
             break;
 		}
         send_mouse_report();
@@ -927,7 +951,7 @@ void send_hid_user_data(void) {
 static void update_ext_mon_setting(void) {
     eeconfig_update_user(user_config._raw);
     hid_user_data_sent = false;
-    send_hid_user_data_timer = timer_read32();
+    send_hid_user_data_timer16 = timer_read();
     oled_display_mode = OLED_DISPLAY_EXT_MONITOR_BRIGHTNESS;
     info_display_timeout = OLED_INFO_DISPLAY_DURATION;
 }
@@ -1186,13 +1210,24 @@ void housekeeping_task_user(void) {
         perform_data_sync();
     }
 
-    if (timer_elapsed32(send_hid_user_data_timer) > HID_SEND_DATA_DELAY && !hid_user_data_sent) {
+    if (timer_elapsed(send_hid_user_data_timer16) > HID_SEND_DATA_DELAY && !hid_user_data_sent) {
         send_hid_user_data();
         hid_user_data_sent = true;
     }
 
     // update mouse tings
     if (mouse_speed_frames_counter++ > MOUSE_SPEED_UPDATE_INTERVAL) {
+
+
+        // Implement spam F
+        // F will be spammed at the same rate as MOUSE_SPEED_UPDATE_INTERVAL
+        if (key_held_state.f && get_highest_layer(default_layer_state) == _GENSHIN) {
+            if (key_held_state.f_delay != 6)
+                key_held_state.f_delay++;
+            else
+                tap_code(KC_F);
+        }
+
         mouse_speed_frames_counter = 0;
 
         if (mousekeys_status.right) {

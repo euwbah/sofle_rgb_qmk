@@ -69,7 +69,7 @@
 // transaction ID for custom RPC communication of host utilization stats from master to slave
 #define SPLIT_TRANSACTION_IDS_USER USER_SYNC_DATA
 #define FORCE_DATA_SYNC_TIME 1000 // User config: how often to force data sync in milliseconds.
-#define RPC_M2S_BUFFER_SIZE 32
+#define RPC_M2S_BUFFER_SIZE 32 // RPC message size limit
 
 // Implementing bespoke mousekey functions from report.h directly
 #define MOUSE_ENABLE // for has_mouse_report_changed() function in report.h
